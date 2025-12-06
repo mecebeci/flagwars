@@ -11,6 +11,7 @@ on:
     branches: [main, develop]
     paths:
       - 'backend/**'
+  workflow_dispatch:
 
 jobs:
   build:

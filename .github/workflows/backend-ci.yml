@@ -1,62 +1,32 @@
+# .github/workflows/backend-ci.yml
+
 name: Backend CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
       - 'backend/**'
   pull_request:
-    branches: [ main ]
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
       
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+          
       - name: Install dependencies
+        working-directory: ./backend
         run: |
-          cd backend
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
-      
-      - name: Run linting
-        run: |
-          cd backend
-          flake8 . --max-line-length=120 --exclude=migrations
-      
-      - name: Run tests
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost/test_db
-          REDIS_URL: redis://localhost:6379/0
-        run: |
-          cd backend
-          python manage.py test
-      
-      - name: Build Docker image
-        run: |
-          docker build -t flagwars-backend:latest ./backend

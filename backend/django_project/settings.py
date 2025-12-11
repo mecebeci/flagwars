@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
+from celery.schedules import crontab
 
 load_dotenv()
 
@@ -82,6 +83,27 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+
+# Celery Beat Schedule
+CELERY_BEAT_SCHEDULE = {
+    # Calculate stats for active users every day at 3 AM
+    'calculate-daily-stats': {
+        'task': 'apis.tasks.calculate_daily_stats',
+        'schedule': crontab(hour=3, minute=0),  # 3:00 AM daily
+    },
+    
+    # Clean up old sessions every 6 hours
+    'cleanup-old-sessions': {
+        'task': 'apis.tasks.cleanup_old_sessions',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours
+    },
+    
+    # Generate leaderboard snapshot every day at 11:59 PM
+    'generate-leaderboard-snapshot': {
+        'task': 'apis.tasks.generate_leaderboard_snapshot',
+        'schedule': crontab(hour=23, minute=59),  # 11:59 PM daily
+    },
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -169,7 +191,7 @@ REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', '')
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/1',
+        'LOCATION': f'redis://:{os.environ.get("REDIS_PASSWORD", "")}@redis:6379/1',  # Database 1 for cache
     }
 }
 

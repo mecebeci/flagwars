@@ -32,37 +32,27 @@ def send_welcome_email(user_id):
 
 @shared_task
 def update_leaderboard_async(user_id, score):
-    import redis
-    from django.conf import settings
-
-    try:
-        redis_client = redis.Redis(
-            host='redis',
-            port=6379,
-            password=settings.REDIS_PASSWORD if hasattr(settings, 'REDIS_PASSWORD') else None,
-            decode_responses=True
-        )
-
-        leaderboard_key = 'flagwars:leaderboard'
-        redis_client.zadd(leaderboard_key, {str(user_id): score})
-
-        rank = redis_client.zrevrank(leaderboard_key, str(user_id))
-        actual_rank = rank + 1 if rank is not None else None
-
-        return f'Leaderboard updated: User {user_id} now has score {score}, rank #{actual_rank}'
+    from apis.services import LeaderboardService
     
-    except redis.RedisError as e:
-        return f'Redis error updating leaderboard: {str(e)}'
+    try:
+        leaderboard = LeaderboardService()
+
+        success = leaderboard.add_score(user_id, score)
+
+        if not success:
+            return f'Failed to update leaderboard for user {user_id}'
+        
+        user_rank = leaderboard.get_user_rank(user_id)
+
+        if user_rank:
+            return f'Leaderboard updated: User {user_id} now has score {score}, rank #{user_rank["rank"]}'
+        else:
+            return f'Leaderboard updated: User {user_id} score {score} (rank unavailable)'
     except Exception as e:
         return f'Error updating leaderboard: {str(e)}'
-    
 
 @shared_task
 def calculate_user_statistics(user_id):
-    """
-    Calculate and cache user statistics from their game history.
-    Computes total games, average score, best score, etc.
-    """
     from apis.models import GameSession
     from django.db.models import Count, Avg, Max, Sum
     import redis
@@ -139,67 +129,64 @@ def calculate_user_statistics(user_id):
         import traceback
         error_details = traceback.format_exc()
         return f'Error calculating statistics: {str(e)}\n{error_details}'
+    
+
+@shared_task
+def calculate_daily_stats():
+    from users.models import User
     from apis.models import GameSession
-    from django.db.models import Count, Avg, Max, Sum
-    import redis
-    from django.conf import settings
-    import json
+    from datetime import timedelta
+    from django.utils import timezone
     
     try:
-        user_sessions = GameSession.objects.filter(
-            user_id=user_id,
+        week_ago = timezone.now() - timedelta(days=7)
+        active_users = GameSession.objects.filter(
+            started_at__gte=week_ago,
             is_completed=True
-        )
+        ).values_list('user_id', flat=True).distinct()
         
-        stats = user_sessions.aggregate(
-            total_games=Count('id'),
-            avg_score=Avg('score'),
-            total_score=Sum('score'),
-            total_questions=Sum('total_questions')  
-        )
+        for user_id in active_users:
+            calculate_user_statistics.delay(user_id)
         
-        if stats['total_games'] == 0:
-            stats_data = {
-                'user_id': user_id,
-                'total_games': 0,
-                'avg_score': 0,
-                'best_score': 0,
-                'total_score': 0,
-                'total_questions': 0,
-                'accuracy': 0.0
-            }
-        else:
-            total_score = stats['total_score'] or 0
-            total_questions = stats['total_questions'] or 1 
-            accuracy = (total_score / total_questions) * 100 if total_questions > 0 else 0.0
-            
-            stats_data = {
-                'user_id': user_id,
-                'total_games': stats['total_games'],
-                'avg_score': round(float(stats['avg_score'] or 0), 2),
-                'best_score': stats['best_score'] or 0,
-                'total_score': total_score,
-                'total_questions': stats['total_questions'] or 0,
-                'accuracy': round(accuracy, 2)
-            }
+        return f'Daily stats calculation queued for {len(active_users)} active users'
         
-        redis_client = redis.Redis(
-            host='redis',
-            port=6379,
-            password=settings.REDIS_PASSWORD if hasattr(settings, 'REDIS_PASSWORD') else None,
-            decode_responses=True
-        )
-        
-        cache_key = f'flagwars:user_stats:{user_id}'
-        redis_client.setex(
-            cache_key,
-            3600, 
-            json.dumps(stats_data)
-        )
-        
-        return f'Statistics calculated for user {user_id}: {stats_data}'
-        
-    except GameSession.DoesNotExist:
-        return f'No game sessions found for user {user_id}'
     except Exception as e:
-        return f'Error calculating statistics: {str(e)}'
+        return f'Error in daily stats calculation: {str(e)}'
+    
+@shared_task
+def cleanup_old_sessions():
+    from apis.models import GameSession
+    from datetime import timedelta
+    from django.utils import timezone
+    
+    try:
+        cutoff_time = timezone.now() - timedelta(hours=24)
+        deleted_count, _ = GameSession.objects.filter(
+            is_completed=False,
+            started_at__lt=cutoff_time
+        ).delete()
+        
+        return f'Cleanup completed: {deleted_count} old incomplete sessions deleted'
+        
+    except Exception as e:
+        return f'Error in cleanup: {str(e)}'
+    
+
+@shared_task
+def generate_leaderboard_snapshot():
+    from apis.services import LeaderboardService
+    import json
+    from django.core.cache import cache
+    from datetime import datetime
+    
+    try:
+        leaderboard_service = LeaderboardService()
+        top_players = leaderboard_service.get_top_players(limit=100)
+        
+        snapshot_key = f'leaderboard_snapshot_{datetime.now().strftime("%Y%m%d")}'
+        cache.set(snapshot_key, top_players, timeout=86400 * 7)
+        
+        return f'Leaderboard snapshot saved: {len(top_players)} players'
+        
+    except Exception as e:
+        return f'Error generating snapshot: {str(e)}'

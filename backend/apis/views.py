@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 from apis.tasks import send_welcome_email, update_leaderboard_async, calculate_user_statistics
@@ -179,3 +179,75 @@ def game_history(request):
         'count': games.count(),
         'games' : serializer.data
     }, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def global_leaderboard(request):
+    from apis.services import LeaderboardService
+    from users.models import User
+
+    try:
+        leadearboard_service = LeaderboardService()
+
+        top_players = leadearboard_service.get_top_player(limit=100)
+        
+        if not top_players:
+            return Response({
+                'leaderboard': [],
+                'message': 'No leaderboard data available'
+            }, status=status.HTTP_200_OK)
+        
+        user_ids = [player['user_id'] for player in top_players]
+        users = User.objects.filter(id__in=user_ids).values('id', 'username')
+        user_map = {user['id']: user['username'] for user in users}
+
+        for player in top_players:
+            player['username'] = user_map.get(player['user_id'], 'Unknown')
+        
+        return Response({
+            'leaderboard': top_players,
+            'total_players': len(top_players)
+        }, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        return Response(
+            {'error': f'Failed to retrieve leaderboard: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_leaderboard_rank(request):
+    from apis.services import LeaderboardService
+    
+    try:
+        leaderboard_service = LeaderboardService()
+        
+        
+        user_rank_data = leaderboard_service.get_user_rank(request.user.id)
+        
+        if not user_rank_data:
+            return Response({
+                'message': 'You are not on the leaderboard yet. Finish a game to get ranked!',
+                'rank': None,
+                'score': 0
+            }, status=status.HTTP_200_OK)
+        
+        
+        total_players = leaderboard_service.redis_client.zcard(
+            LeaderboardService.LEADERBOARD_KEY
+        )
+        
+        return Response({
+            'rank': user_rank_data['rank'],
+            'user_id': request.user.id,
+            'username': request.user.username,
+            'score': user_rank_data['score'],
+            'total_players': total_players
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Failed to retrieve your rank: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

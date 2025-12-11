@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import RegisterSerializer, UserSerializer
+from apis.tasks import send_welcome_email
 
 
 class RegisterView(generics.CreateAPIView):
@@ -15,6 +16,9 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        
+        # Trigger async welcome email task
+        send_welcome_email.delay(user.id)
 
         refresh = RefreshToken.for_user(user)
 

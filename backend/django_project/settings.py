@@ -75,6 +75,14 @@ DATABASES = {
     }
 }
 
+# Celery Configuration
+CELERY_BROKER_URL = f'redis://:{os.environ.get("REDIS_PASSWORD")}@redis:6379/0'
+CELERY_RESULT_BACKEND = f'redis://:{os.environ.get("REDIS_PASSWORD")}@redis:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -107,6 +115,8 @@ CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173'
 CORS_ALLOW_CREDENTIALS = True
 
 AUTH_USER_MODEL = 'users.User'
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

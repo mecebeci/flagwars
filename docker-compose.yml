@@ -1,5 +1,3 @@
-# docker-compose.yml
-
 version: '3.8'
 
 services:
@@ -51,6 +49,50 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  web:
+    build: ./backend
+    container_name: flagwars_web
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery_worker:
+      build: ./backend
+      container_name: flagwars_celery_worker
+      command: celery -A django_project worker --loglevel=info
+      volumes:
+        - ./backend:/app
+      environment:
+        - POSTGRES_DB=${POSTGRES_DB}
+        - POSTGRES_USER=${POSTGRES_USER}
+        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        - POSTGRES_HOST=db
+        - POSTGRES_PORT=5432
+        - REDIS_PASSWORD=${REDIS_PASSWORD}
+        - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+        - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      depends_on:
+        db:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
 
 volumes:
   postgres_data:

@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
+from apis.tasks import send_welcome_email, update_leaderboard_async, calculate_user_statistics
 
 from .models import Country, GameSession
 from .serializers import *
@@ -157,6 +158,9 @@ def finish_game(request):
     
     game_session.is_completed = True
     game_session.save()
+
+    update_leaderboard_async.delay(request.user.id, game_session.score)
+    calculate_user_statistics.delay(request.user.id)
 
     serializer = GameSessionSerializer(game_session)
     return Response({

@@ -1,13 +1,47 @@
-const QuizCard = ({ question, userAnswer, onAnswerChange, onSubmit, loading, disabled }) => {
+import { useEffect, useRef } from 'react';
+
+const QuizCard = ({ question, userAnswer, onAnswerChange, onAutoCheck, onSkip, skipsRemaining, loading, disabled }) => {
+  const inputRef = useRef(null);
+
+  // Auto-focus input when question changes
+  useEffect(() => {
+    if (inputRef.current && !disabled) {
+      inputRef.current.focus();
+    }
+  }, [question, disabled]);
+
+  // Keep focus on input at all times
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (inputRef.current && document.activeElement !== inputRef.current && !disabled) {
+        inputRef.current.focus();
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [disabled]);
+
   if (loading && !question) {
-    return <div className="text-center p-4">Yükleniyor...</div>;
+    return (
+      <div className="w-full max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="text-4xl mb-3">🎮</div>
+          <p className="text-lg font-semibold text-gray-800">Loading question...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!question) return null;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit();
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    onAnswerChange(value);
+    
+    // Auto-check answer as user types
+    if (value.trim().length >= 3) {
+      onAutoCheck(value);
+    }
   };
 
   return (
@@ -35,28 +69,32 @@ const QuizCard = ({ question, userAnswer, onAnswerChange, onSubmit, loading, dis
           </p>
         </div>
 
-        {/* Answer Input */}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <input
-              type="text"
-              value={userAnswer}
-              onChange={(e) => onAnswerChange(e.target.value)}
-              placeholder="Type the country name..."
-              disabled={disabled || loading}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-base disabled:bg-gray-100 disabled:cursor-not-allowed"
-              autoFocus
-            />
-          </div>
+        {/* Answer Input - No Submit Button! */}
+        <div className="mb-4">
+          <input
+            ref={inputRef}
+            type="text"
+            value={userAnswer}
+            onChange={handleInputChange}
+            placeholder="Start typing the country name..."
+            disabled={disabled || loading}
+            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-base disabled:bg-gray-100 disabled:cursor-not-allowed text-center font-semibold text-lg"
+            autoComplete="off"
+            autoFocus
+          />
+        </div>
 
+        {/* Skip Button Only */}
+        <div className="flex justify-center">
           <button
-            type="submit"
-            disabled={disabled || loading || !userAnswer.trim()}
-            className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold text-base hover:bg-blue-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            type="button"
+            onClick={onSkip}
+            disabled={loading || skipsRemaining <= 0}
+            className="bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold text-base hover:bg-orange-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Checking...' : '✓ Submit Answer'}
+            ⏭️ Skip ({skipsRemaining})
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );

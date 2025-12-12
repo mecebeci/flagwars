@@ -1,18 +1,22 @@
-const QuizGameOver = ({ score, totalQuestions, onRestart }) => {
-  const percentage = Math.round((score / totalQuestions) * 100);
+const QuizGameOver = ({ score, countriesViewed, totalCountries = 192, onRestart }) => {
+  const isAllCompleted = countriesViewed >= totalCountries;
   
   // Determine performance level
   let performanceEmoji = '🎉';
-  let performanceText = 'Excellent!';
+  let performanceText = 'Great Job!';
   let performanceColor = 'text-green-600';
   
-  if (percentage < 50) {
-    performanceEmoji = '📚';
+  if (isAllCompleted) {
+    performanceEmoji = '🏆';
+    performanceText = 'Perfect! All Flags Completed!';
+    performanceColor = 'text-yellow-600';
+  } else if (score === 0) {
+    performanceEmoji = '😅';
     performanceText = 'Keep Practicing!';
     performanceColor = 'text-orange-600';
-  } else if (percentage < 80) {
-    performanceEmoji = '👍';
-    performanceText = 'Good Job!';
+  } else if (score >= 100) {
+    performanceEmoji = '🎖️';
+    performanceText = 'Excellent!';
     performanceColor = 'text-blue-600';
   }
 
@@ -27,38 +31,55 @@ const QuizGameOver = ({ score, totalQuestions, onRestart }) => {
           {performanceText}
         </h1>
         <p className="text-base text-gray-600 mb-6">
-          Quiz Complete!
+          Challenge Complete!
         </p>
+
+        {/* Completion Badge */}
+        {isAllCompleted && (
+          <div className="bg-yellow-100 border-2 border-yellow-500 rounded-lg p-4 mb-6">
+            <p className="text-lg font-bold text-yellow-800">
+              🌍 You've seen all {totalCountries} flags in the world!
+            </p>
+          </div>
+        )}
 
         {/* Score Display */}
         <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl p-8 mb-6 text-white">
           <p className="text-lg font-semibold mb-3 opacity-90">
-            Your Score
+            Final Score
           </p>
           <p className="text-6xl font-bold mb-3">
-            {score}/{totalQuestions}
+            {score}
           </p>
-          <p className="text-2xl opacity-90">
-            {percentage}% Correct
+          <p className="text-lg opacity-90">
+            correct answers
           </p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-green-50 rounded-lg p-4">
-            <p className="text-xs text-green-600 font-semibold uppercase mb-1">
-              Correct
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-blue-50 rounded-lg p-4">
+            <p className="text-xs text-blue-600 font-semibold uppercase mb-1">
+              Flags Viewed
             </p>
-            <p className="text-2xl font-bold text-green-700">
-              {score}
+            <p className="text-2xl font-bold text-blue-700">
+              {countriesViewed}/{totalCountries}
             </p>
           </div>
-          <div className="bg-red-50 rounded-lg p-4">
-            <p className="text-xs text-red-600 font-semibold uppercase mb-1">
-              Incorrect
+          <div className="bg-green-50 rounded-lg p-4">
+            <p className="text-xs text-green-600 font-semibold uppercase mb-1">
+              Accuracy
             </p>
-            <p className="text-2xl font-bold text-red-700">
-              {totalQuestions - score}
+            <p className="text-2xl font-bold text-green-700">
+              {countriesViewed > 0 ? Math.round((score / countriesViewed) * 100) : 0}%
+            </p>
+          </div>
+          <div className="bg-purple-50 rounded-lg p-4">
+            <p className="text-xs text-purple-600 font-semibold uppercase mb-1">
+              Completion
+            </p>
+            <p className="text-2xl font-bold text-purple-700">
+              {Math.round((countriesViewed / totalCountries) * 100)}%
             </p>
           </div>
         </div>

@@ -6,7 +6,7 @@ class QuestionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Country
-        fields = ['id', 'code', 'flag_emoji', 'flag_image_url']
+        fields = ['id', 'code', 'flag_image_url']
     
     def get_flag_image_url(self, obj):
         if obj.flag_image:
@@ -16,32 +16,20 @@ class QuestionSerializer(serializers.ModelSerializer):
 class AnswerSerializer(serializers.Serializer):
     answer = serializers.CharField(max_length=100, trim_whitespace=True)
 
-class StartGameSerializer(serializers.Serializer):
-    game_mode = serializers.ChoiceField(
-        choices=['quiz', 'flashcard'],
-        default='quiz',
-        help_text="Game mode: 'quiz' for traditional quiz mode, 'flashcard' for learning mode"
-    )
-    
-    class Meta:
-        fields = ['game_mode']
-
 class GameSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = GameSession
         fields = [
             'id',
             'user',
-            'game_mode', 
-            'questions',
-            'viewed_countries',  
-            'total_questions',
-            'current_question',
+            'current_country_id',
+            'viewed_countries',
             'score',
-            'flags_viewed',  
+            'skips_remaining',
+            'skips_used',
             'started_at',
             'completed_at',
-            'time_elapsed_seconds', 
+            'time_elapsed_seconds',
             'is_completed'
         ]
         read_only_fields = ['id', 'started_at', 'completed_at']

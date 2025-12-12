@@ -1,4 +1,4 @@
-const QuizFeedback = ({ feedback, onNext, isLastQuestion }) => {
+const QuizFeedback = ({ feedback }) => {
   if (!feedback) return null;
 
   return (
@@ -19,20 +19,23 @@ const QuizFeedback = ({ feedback, onNext, isLastQuestion }) => {
             {feedback.correct ? 'Correct!' : 'Incorrect'}
           </h3>
 
-          {/* Show correct answer if wrong */}
-          {!feedback.correct && (
-            <p className="text-base text-gray-700 mb-3">
-              The correct answer is: <strong>{feedback.correctAnswer}</strong>
+          {/* Show correct answer */}
+          <p className="text-base text-gray-700 mb-2">
+            The answer is: <strong>{feedback.correctAnswer}</strong>
+          </p>
+
+          {/* Auto-advance message */}
+          {feedback.autoAdvance && (
+            <p className="text-sm text-green-600">
+              Moving to next flag...
             </p>
           )}
-
-          {/* Next Button */}
-          <button
-            onClick={onNext}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold text-base hover:bg-blue-700 transition shadow-lg"
-          >
-            {isLastQuestion ? '🏁 See Results' : '➡️ Next Question'}
-          </button>
+          
+          {!feedback.autoAdvance && (
+            <p className="text-sm text-gray-600">
+              Try again or skip this question
+            </p>
+          )}
         </div>
       </div>
     </div>

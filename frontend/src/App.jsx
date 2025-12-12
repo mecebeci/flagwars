@@ -24,8 +24,8 @@ function App() {
         />
         
         <Route
-          path="/quiz"
-          element={<ProtectedRoute><QuizPage /></ProtectedRoute>}
+          path="/challenge"
+          element={<ProtectedRoute><QuizPage /></ProtectedRoute>} 
         />
 
         {/* Default redirect */}

@@ -33,10 +33,10 @@ const Header = () => {
               Home
             </button>
             <button
-              onClick={() => navigate('/quiz')}
+              onClick={() => navigate('/challenge')}
               className="text-gray-700 hover:text-blue-600 font-medium transition"
             >
-              🎮 Quiz Game
+              Challenge
             </button>
             <button
               onClick={() => navigate('/leaderboard')}

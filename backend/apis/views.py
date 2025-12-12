@@ -5,81 +5,80 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiResponse
-from apis.tasks import send_welcome_email, update_leaderboard_async, calculate_user_statistics
+from apis.tasks import update_leaderboard_async, calculate_user_statistics
 
 from .models import Country, GameSession
 from .serializers import *
 import random
 
+
+# ============================================
+# GAME ENDPOINTS - NEW ENDLESS MODE
+# ============================================
+
 @extend_schema(
-    request=StartGameSerializer,
     responses={
         201: GameSessionSerializer,
-        400: OpenApiResponse(description='Bad request - Invalid game mode or not enough countries')
+        400: OpenApiResponse(description='Bad request')
     },
-    description="Start a new game session. Choose between 'quiz' mode (10 pre-selected questions) or 'flashcard' mode (endless learning).",
-    summary="Start Game Session"
+    description="Start a new endless game session",
+    summary="Start Game"
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def start_game(request):
-    # Validate input
-    serializer = StartGameSerializer(data=request.data)
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    game_mode = serializer.validated_data['game_mode']
-    
-    if game_mode == 'quiz':
-        # Original logic: pre-select 10 questions
-        all_countries = Country.objects.all()
-        
-        if all_countries.count() < 10:
-            return Response(
-                {'error': 'Not enough countries in database. Please load country data.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        random_countries = random.sample(list(all_countries), 10)
-        question_ids = [country.id for country in random_countries]
-        
-        game_session = GameSession.objects.create(
-            user=request.user,
-            game_mode='quiz',
-            questions=question_ids,
-            total_questions=10,
-            current_question=0,
-            score=0
+    """
+    Start new endless game session
+    - No pre-selection of questions
+    - Player gets random flags
+    - Game continues until player gives up
+    """
+    # Check if there are countries in database
+    if Country.objects.count() < 1:
+        return Response(
+            {'error': 'No countries in database. Please load country data.'},
+            status=status.HTTP_400_BAD_REQUEST
         )
     
-    else:  # flashcard mode
-        # No pre-selected questions - endless mode
-        game_session = GameSession.objects.create(
-            user=request.user,
-            game_mode='flashcard',
-            questions=[],
-            viewed_countries=[],
-            total_questions=0,  # Unlimited
-            current_question=0,
-            score=0,
-            flags_viewed=0
-        )
+    # Create new game session
+    game_session = GameSession.objects.create(
+        user=request.user,
+        current_country_id=None,
+        viewed_countries=[],
+        score=0,
+        skips_remaining=3,
+        skips_used=0,
+        is_completed=False
+    )
     
     serializer = GameSessionSerializer(game_session)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+
 @extend_schema(
     responses={
         200: QuestionSerializer,
-        404: OpenApiResponse(description='No active game found'),
-        400: OpenApiResponse(description='Game is completed')
+        404: OpenApiResponse(description='No active game found')
     },
-    description="Get next question for the active game session. Returns country data with or without name based on game mode.",
-    summary="Get Next Question"
+    description="Get current or next random flag",
+    summary="Get Question"
+)
+@extend_schema(
+    responses={
+        200: QuestionSerializer,
+        404: OpenApiResponse(description='No active game found')
+    },
+    description="Get current or next random flag",
+    summary="Get Question"
 )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_question(request):
+    """
+    Get current flag or new random flag
+    - Returns unviewed country
+    - Auto-completes game when all countries viewed
+    """
     try:
         game_session = GameSession.objects.filter(
             user=request.user,
@@ -91,45 +90,50 @@ def get_question(request):
             status=status.HTTP_404_NOT_FOUND
         )
     
-    if game_session.game_mode == 'quiz':
-        # Original quiz logic
-        if game_session.current_question >= game_session.total_questions:
-            return Response(
-                {'error': 'Game is completed. Please start a new game.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        current_index = game_session.current_question
-        country_id = game_session.questions[current_index]
-        
+    # If there's a current country, return it (user is retrying)
+    if game_session.current_country_id:
         try:
-            country = Country.objects.get(id=country_id)
+            country = Country.objects.get(id=game_session.current_country_id)
         except Country.DoesNotExist:
+            country = None
+    else:
+        country = None
+    
+    # If no current country, get new random one
+    if not country:
+        # Get ALL viewed countries (not just last 30)
+        viewed_ids = game_session.viewed_countries
+        
+        # Get total countries count
+        total_countries = Country.objects.count()
+        
+        # Check if all countries have been viewed
+        if len(viewed_ids) >= total_countries:
+            # ALL COUNTRIES COMPLETED! Auto-finish game
+            time_elapsed = (timezone.now() - game_session.started_at).total_seconds()
+            game_session.time_elapsed_seconds = int(time_elapsed)
+            game_session.is_completed = True
+            game_session.completed_at = timezone.now()
+            game_session.save()
+            
+            # Trigger leaderboard update
+            from apis.tasks import update_leaderboard_async, calculate_user_statistics
+            update_leaderboard_async.delay(request.user.id, game_session.score)
+            calculate_user_statistics.delay(request.user.id)
+            
             return Response(
-                {'error': 'Country not found'},
-                status=status.HTTP_404_NOT_FOUND
+                {
+                    'game_completed': True,
+                    'message': 'Congratulations! You have seen all flags!',
+                    'final_score': game_session.score,
+                    'total_countries': total_countries,
+                    'countries_viewed': len(viewed_ids)
+                },
+                status=status.HTTP_200_OK
             )
         
-        serializer = QuestionSerializer(country)
-        data = serializer.data
-        data['question_number'] = current_index + 1
-        data['total_questions'] = game_session.total_questions
-        data['session_id'] = game_session.id
-        
-        return Response(data, status=status.HTTP_200_OK)
-    
-    else:  # flashcard mode
-        # Get random country (excluding recently viewed ones for variety)
-        viewed_ids = game_session.viewed_countries[-20:] if game_session.viewed_countries else []
-        
-        if viewed_ids:
-            country = Country.objects.exclude(id__in=viewed_ids).order_by('?').first()
-        else:
-            country = Country.objects.order_by('?').first()
-        
-        if not country:
-            # If all countries viewed, reset and get any random one
-            country = Country.objects.order_by('?').first()
+        # Get random UNVIEWED country
+        country = Country.objects.exclude(id__in=viewed_ids).order_by('?').first()
         
         if not country:
             return Response(
@@ -137,24 +141,29 @@ def get_question(request):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-        # Track viewed country
-        game_session.viewed_countries.append(country.id)
-        game_session.flags_viewed += 1
+        # Set as current country
+        game_session.current_country_id = country.id
         game_session.save()
-        
-        # Return flag with country name visible
-        flag_url = country.flag_image.url if country.flag_image else None
-        
-        return Response({
-            'id': country.id,
-            'name': country.name,  # Visible in flashcard mode!
-            'code': country.code,
-            'flag_emoji': country.flag_emoji,
-            'flag_image_url': flag_url,
-            'flags_viewed': game_session.flags_viewed,
-            'session_id': game_session.id
-        }, status=status.HTTP_200_OK)
-
+    
+    # Return question data (country name HIDDEN)
+    flag_url = country.flag_image.url if country.flag_image else None
+    
+    # Calculate progress
+    total_countries = Country.objects.count()
+    unique_viewed = len(game_session.viewed_countries)
+    remaining = total_countries - unique_viewed
+    
+    return Response({
+        'id': country.id,
+        'code': country.code,
+        'flag_image_url': flag_url,
+        'score': game_session.score,
+        'skips_remaining': game_session.skips_remaining,
+        'countries_viewed': unique_viewed,
+        'total_countries': total_countries,
+        'remaining': remaining,
+        'session_id': game_session.id
+    }, status=status.HTTP_200_OK)
 
 @extend_schema(
     request=AnswerSerializer,
@@ -171,8 +180,8 @@ def submit_answer(request):
 
     try:
         game_session = GameSession.objects.filter(
-            user = request.user,
-            is_completed = False
+            user=request.user,
+            is_completed=False
         ).latest('started_at')
     except GameSession.DoesNotExist:
         return Response(
@@ -180,46 +189,103 @@ def submit_answer(request):
             status=status.HTTP_404_NOT_FOUND
         )
     
-    if game_session.current_question >= game_session.total_questions:
+    if not game_session.current_country_id:
         return Response(
-            {'error': 'Game is already completed'},
-            status= status.HTTP_400_BAD_REQUEST
+            {'error': 'No current question. Please call /game/question/ first.'},
+            status=status.HTTP_400_BAD_REQUEST
         )
     
-    current_index = game_session.current_question
-    country_id = game_session.questions[current_index]
-
     try:
-        country = Country.objects.get(id=country_id)
+        country = Country.objects.get(id=game_session.current_country_id)
     except Country.DoesNotExist:
         return Response(
             {'error': 'Country not found.'},
-            status = status.HTTP_404_NOT_FOUND
+            status=status.HTTP_404_NOT_FOUND
         )
     
-    correct_answer = [country.name.lower()] + [alias.lower() for alias in country.aliases]
-    is_correct = answer in correct_answer
+    # Build list of correct answers
+    correct_answers = [country.name.lower()] + [alias.lower() for alias in country.aliases]
+    
+    # FLEXIBLE MATCHING: Also accept if answer is contained in name
+    # Example: "taiwan" matches "Taiwan, Province of China"
+    is_correct = answer in correct_answers
+    
+    # If not exact match, check if user's answer is a significant part of the name
+    if not is_correct and len(answer) >= 4:
+        country_name_lower = country.name.lower()
+        # Check if answer is the first word of the country name
+        first_word = country_name_lower.split(',')[0].strip()
+        if answer == first_word:
+            is_correct = True
 
     if is_correct:
         game_session.score += 1
+        game_session.viewed_countries.append(country.id)
+        game_session.current_country_id = None
+        game_session.save()
+        
+        return Response({
+            'correct': True,
+            'correct_answer': country.name,
+            'score': game_session.score,
+            'message': 'Correct! Moving to next flag...',
+            'auto_advance': True
+        }, status=status.HTTP_200_OK)
+    else:
+        return Response({
+            'correct': False,
+            'correct_answer': country.name,
+            'score': game_session.score,
+            'message': 'Incorrect. Try again or skip.',
+            'auto_advance': False
+        }, status=status.HTTP_200_OK)
 
-    game_session.current_question += 1
 
-    if game_session.current_question >= game_session.total_questions:
-        game_session.is_completed = True
-        game_session.completed_at = None
-
+@extend_schema(
+    responses={200: dict}
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def skip_question(request):
+    """
+    Skip current question (max 3 times per game)
+    """
+    try:
+        game_session = GameSession.objects.filter(
+            user=request.user,
+            is_completed=False
+        ).latest('started_at')
+    except GameSession.DoesNotExist:
+        return Response(
+            {'error': 'No active game found.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Check if skips remaining
+    if game_session.skips_remaining <= 0:
+        return Response(
+            {'error': 'No skips remaining. You must answer or give up.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Use a skip
+    game_session.skips_remaining -= 1
+    game_session.skips_used += 1
+    
+    # Add current country to viewed (if exists)
+    if game_session.current_country_id:
+        game_session.viewed_countries.append(game_session.current_country_id)
+    
+    # Clear current country (will get new one on next /question/ call)
+    game_session.current_country_id = None
     game_session.save()
-
+    
     return Response({
-        'correct' : is_correct,
-        'correct_answer' : country.name,
-        'score' : game_session.score,
-        'current_question': game_session.current_question,
-        'total_question' : game_session.total_questions,
-        'is_completed' : game_session.is_completed
+        'message': 'Question skipped. Moving to next flag...',
+        'skips_remaining': game_session.skips_remaining,
+        'skips_used': game_session.skips_used,
+        'score': game_session.score
     }, status=status.HTTP_200_OK)
-
 
 
 @extend_schema(
@@ -227,12 +293,15 @@ def submit_answer(request):
         200: GameSessionSerializer,
         404: OpenApiResponse(description='No active game found')
     },
-    description="Finish the active game session. Calculates final score and updates leaderboard.",
-    summary="Finish Game"
+    description="Give up and finish the game",
+    summary="Give Up / Finish Game"
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def finish_game(request):
+    """
+    End the current game session (Give Up)
+    """
     try:
         game_session = GameSession.objects.filter(
             user=request.user,
@@ -248,69 +317,61 @@ def finish_game(request):
     time_elapsed = (timezone.now() - game_session.started_at).total_seconds()
     game_session.time_elapsed_seconds = int(time_elapsed)
     
-    if game_session.game_mode == 'flashcard':
-        # Flashcard scoring: flags_viewed is already tracked
-        # Score formula: flags_viewed * 10 + time bonus
-        base_score = game_session.flags_viewed * 10
-        
-        # Time bonus: faster = better (max 300 bonus points)
-        # If completed in under 60 seconds, get bonus
-        time_bonus = max(0, 300 - int(time_elapsed))
-        
-        game_session.score = base_score + time_bonus
-    
-    # else: quiz mode score already tracked in submit_answer
-    
+    # Mark as completed
     game_session.is_completed = True
     game_session.completed_at = timezone.now()
     game_session.save()
 
-    # Update leaderboard and stats
+    # Update leaderboard with final score
     update_leaderboard_async.delay(request.user.id, game_session.score)
     calculate_user_statistics.delay(request.user.id)
 
-    # Prepare response data
+    # Prepare response
     serializer = GameSessionSerializer(game_session)
     
-    response_data = {
+    # Calculate stats
+    flags_per_minute = (len(game_session.viewed_countries) / time_elapsed * 60) if time_elapsed > 0 else 0
+    
+    return Response({
         'message': 'Game completed successfully',
-        'game': serializer.data
-    }
-    
-    # Add extra stats for flashcard mode
-    if game_session.game_mode == 'flashcard':
-        flags_per_minute = (game_session.flags_viewed / time_elapsed * 60) if time_elapsed > 0 else 0
-        response_data['stats'] = {
-            'flags_viewed': game_session.flags_viewed,
+        'game': serializer.data,
+        'stats': {
+            'final_score': game_session.score,
+            'countries_viewed': len(game_session.viewed_countries),
+            'skips_used': game_session.skips_used,
             'time_seconds': game_session.time_elapsed_seconds,
-            'flags_per_minute': round(flags_per_minute, 1),
-            'final_score': game_session.score
+            'flags_per_minute': round(flags_per_minute, 1)
         }
-    
-    return Response(response_data, status=status.HTTP_200_OK)
+    }, status=status.HTTP_200_OK)
 
+
+# ============================================
+# LEADERBOARD & STATS
+# ============================================
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def game_history(request):
-    games = GameSession.objects.filter(user=request.user).order_by('-started_at') # reversed order
+    """Get user's game history"""
+    games = GameSession.objects.filter(user=request.user).order_by('-started_at')
     serializer = GameSessionSerializer(games, many=True)
 
     return Response({
         'count': games.count(),
-        'games' : serializer.data
+        'games': serializer.data
     }, status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def global_leaderboard(request):
+    """Get global leaderboard"""
     from apis.services import LeaderboardService
     from users.models import User
 
     try:
-        leadearboard_service = LeaderboardService()
-
-        top_players = leadearboard_service.get_top_player(limit=100)
+        leaderboard_service = LeaderboardService()
+        top_players = leaderboard_service.get_top_player(limit=100)
         
         if not top_players:
             return Response({
@@ -329,22 +390,21 @@ def global_leaderboard(request):
             'leaderboard': top_players,
             'total_players': len(top_players)
         }, status=status.HTTP_200_OK)
-    
     except Exception as e:
         return Response(
             {'error': f'Failed to retrieve leaderboard: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-    
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_leaderboard_rank(request):
+    """Get current user's leaderboard rank"""
     from apis.services import LeaderboardService
     
     try:
         leaderboard_service = LeaderboardService()
-        
-        
         user_rank_data = leaderboard_service.get_user_rank(request.user.id)
         
         if not user_rank_data:
@@ -353,7 +413,6 @@ def my_leaderboard_rank(request):
                 'rank': None,
                 'score': 0
             }, status=status.HTTP_200_OK)
-        
         
         total_players = leaderboard_service.redis_client.zcard(
             LeaderboardService.LEADERBOARD_KEY
@@ -366,7 +425,6 @@ def my_leaderboard_rank(request):
             'score': user_rank_data['score'],
             'total_players': total_players
         }, status=status.HTTP_200_OK)
-        
     except Exception as e:
         return Response(
             {'error': f'Failed to retrieve your rank: {str(e)}'},
@@ -377,6 +435,7 @@ def my_leaderboard_rank(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def random_country(request):
+    """Get random country (for testing/home page)"""
     country = Country.objects.order_by('?').first()
     
     if not country:
@@ -385,13 +444,11 @@ def random_country(request):
             status=404
         )
     
-    # Get the full URL from the ImageField
     flag_url = country.flag_image.url if country.flag_image else None
     
     return Response({
         'id': country.id,
         'name': country.name,
         'code': country.code,
-        'flag_emoji': country.flag_emoji,
         'flag_image_url': flag_url,
     })

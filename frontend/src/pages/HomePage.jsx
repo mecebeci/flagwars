@@ -1,13 +1,68 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
 import api from '../services/api';
 
 const HomePage = () => {
+  const { user } = useAuth();
+
+  // If authenticated, show the random flag feature
+  if (user) {
+    return <AuthenticatedHome />;
+  }
+
+  // If not authenticated, show landing page
+  return <LandingPage />;
+};
+
+// Landing Page for Unauthenticated Users
+// Landing Page for Unauthenticated Users
+const LandingPage = () => {
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        {/* Hero Section */}
+        <div className="bg-white rounded-lg shadow-lg p-12">
+          <h1 className="text-5xl font-bold text-gray-800 mb-4">
+            Flag Wars
+          </h1>
+          <p className="text-xl text-gray-600 mb-8">
+            Test your knowledge of world flags in this interactive trivia game
+          </p>
+          
+          {/* CTA Buttons - Highlights removed, margin top adjusted slightly if needed */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
+            <Link
+              to="/register"
+              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-blue-700 transition"
+            >
+              Get Started
+            </Link>
+            <Link
+              to="/login"
+              className="bg-gray-200 text-gray-800 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-300 transition"
+            >
+              Log In
+            </Link>
+          </div>
+        </div>
+
+        {/* Additional Info */}
+        <p className="text-gray-500 mt-8">
+          Free to play • Start learning today
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// Authenticated User Home (Random Flag Feature)
+const AuthenticatedHome = () => {
   const [country, setCountry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Fetch a random country on component mount
   useEffect(() => {
     fetchRandomCountry();
   }, []);
@@ -52,7 +107,7 @@ const HomePage = () => {
             {/* Country Display */}
             {!loading && country && (
               <div className="space-y-6">
-                {/* Flag Image - FIXED HEIGHT CONTAINER */}
+                {/* Flag Image */}
                 <div className="flex justify-center">
                   <div className="w-full max-w-md h-64 flex items-center justify-center">
                     <img
@@ -80,7 +135,7 @@ const HomePage = () => {
                     disabled={loading}
                     className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    🎲 Get Another Random Flag
+                    Get Another Random Flag
                   </button>
                 </div>
               </div>

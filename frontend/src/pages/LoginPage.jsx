@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/flag-wars-logo.png';
 
@@ -93,13 +93,17 @@ const LoginPage = () => {
           </button>
         </form>
 
-        {/* Register Link (for future) */}
-        <p className="text-center text-gray-600 mt-6">
-          Don't have an account?{' '}
-          <span className="text-blue-600 font-semibold cursor-pointer hover:underline">
-            Register here
-          </span>
-        </p>
+            {/* Register Link */}
+            <p className="text-center text-gray-600 mt-6">
+            Don't have an account?{' '}
+            {/* 2. span yerine Link kullan */}
+            <Link 
+              to="/register" 
+              className="text-blue-600 font-semibold hover:underline"
+            >
+              Register here
+            </Link>
+          </p>
       </div>
     </div>
   );

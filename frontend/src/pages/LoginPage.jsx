@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/flag-wars-logo.png';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -30,13 +31,16 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-      <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">🏁 Flag Wars</h1>
-          <p className="text-gray-600 mt-2">Test your flag knowledge!</p>
-        </div>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
+          {/* Header */}
+          <div className="flex flex-col items-center mb-8">
+            <img 
+              src={logo} 
+              alt="Flag Wars" 
+              className="h-12 w-auto mb-2 object-contain" 
+            />
+          </div>
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/flag-wars-logo.png';
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -16,8 +17,11 @@ const Header = () => {
         <div className="flex justify-between items-center">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <span className="text-3xl">🏁</span>
-            <h1 className="text-2xl font-bold text-gray-800">Flag Wars</h1>
+            <img 
+              src={logo} 
+              alt="Flag Wars" 
+              className="h-10 w-auto mb-2 object-contain"  
+            />
           </div>
 
           {/* Navigation Links */}
@@ -27,12 +31,6 @@ const Header = () => {
               className="text-gray-700 hover:text-blue-600 font-medium transition"
             >
               Home
-            </button>
-            <button
-              onClick={() => navigate('/learn')}
-              className="text-gray-700 hover:text-blue-600 font-medium transition"
-            >
-              🧠 Learn Mode
             </button>
             <button
               onClick={() => navigate('/quiz')}
@@ -61,7 +59,7 @@ const Header = () => {
             </span>
             <button
               onClick={handleLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-medium"
+              className="border border-red-500 text-red-500 bg-transparent hover:bg-red-50 px-4 py-2 rounded-lg transition font-medium"
             >
               Logout
             </button>

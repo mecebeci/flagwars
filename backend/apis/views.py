@@ -7,7 +7,7 @@ from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from apis.tasks import send_welcome_email, update_leaderboard_async, calculate_user_statistics
 
-from .models import Country, GameSession, UserFlagProgress
+from .models import Country, GameSession
 from .serializers import *
 import random
 
@@ -395,94 +395,3 @@ def random_country(request):
         'flag_emoji': country.flag_emoji,
         'flag_image_url': flag_url,
     })
-
-from .services import LeitnerService
-
-@extend_schema(
-    responses={200: UserFlagProgressSerializer(many=True)},
-    description="Get flags that are due for review (spaced repetition)",
-    summary="Get Due Flags for Review"
-)
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_due_flags(request):
-    limit = int(request.query_params.get('limit', 10))
-    
-    due_flags = LeitnerService.get_due_flags(request.user, limit=limit)
-    serializer = UserFlagProgressSerializer(due_flags, many=True)
-    
-    return Response({
-        'count': due_flags.count(),
-        'due_flags': serializer.data
-    }, status=status.HTTP_200_OK)
-
-
-@extend_schema(
-    request=ReviewAnswerSerializer,
-    responses={200: UserFlagProgressSerializer},
-    description="Submit a review answer for a flag",
-    summary="Submit Review Answer"
-)
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def submit_review(request):
-    serializer = ReviewAnswerSerializer(data=request.data)
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    country_id = serializer.validated_data['country_id']
-    is_correct = serializer.validated_data['is_correct']
-    
-    try:
-        progress = LeitnerService.process_review(
-            user=request.user,
-            country_id=country_id,
-            is_correct=is_correct
-        )
-        
-        result_serializer = UserFlagProgressSerializer(progress)
-        
-        return Response({
-            'message': 'Review processed successfully',
-            'progress': result_serializer.data,
-            'moved_to_box': progress.box_number,
-            'next_review': progress.next_review_date,
-        }, status=status.HTTP_200_OK)
-        
-    except ValueError as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-
-@extend_schema(
-    responses={200: dict},
-    description="Get learning statistics and progress overview",
-    summary="Get Learning Statistics"
-)
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_learning_stats(request):
-    stats = LeitnerService.get_learning_stats(request.user)
-    
-    return Response(stats, status=status.HTTP_200_OK)
-
-
-@extend_schema(
-    responses={201: UserFlagProgressSerializer(many=True)},
-    description="Add new flags to learning queue (Box 1)",
-    summary="Add New Flags to Learn"
-)
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def add_new_flags(request):
-    limit = int(request.data.get('limit', 10))
-    
-    new_flags = LeitnerService.add_new_flags_to_learn(request.user, limit=limit)
-    serializer = UserFlagProgressSerializer(new_flags, many=True)
-    
-    return Response({
-        'message': f'Added {len(new_flags)} new flags to learn',
-        'new_flags': serializer.data
-    }, status=status.HTTP_201_CREATED)

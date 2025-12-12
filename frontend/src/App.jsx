@@ -3,7 +3,6 @@ import { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
-import LearningPage from './pages/LearningPage';
 import QuizPage from './pages/QuizPage';
 
 function App() {
@@ -37,11 +36,6 @@ function App() {
 
         {/* 404 Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
-
-        <Route
-          path="/learn"
-          element={<ProtectedRoute><LearningPage /></ProtectedRoute>}
-        />
       </Routes>
     </div>
   );

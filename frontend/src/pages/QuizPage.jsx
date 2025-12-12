@@ -28,7 +28,7 @@ const QuizPage = () => {
   if (quizStatus === 'idle') {
     return (
       <Layout>
-        <div className="min-h-screen bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-500 py-6 px-4">
+        <div className="min-h-screen bg-gray-100 py-6 px-4">
           <div className="max-w-xl mx-auto">
             <div className="bg-white rounded-xl shadow-lg p-6 text-center">
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
@@ -55,8 +55,7 @@ const QuizPage = () => {
               <button
                 onClick={startQuiz}
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-blue-700 hover:to-purple-700 transition shadow-lg disabled:opacity-50"
-              >
+                className="w-full bg-blue-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition shadow-lg disabled:opacity-50"              >
                 {loading ? 'Starting...' : '🚀 Start Quiz'}
               </button>
 
@@ -75,7 +74,7 @@ const QuizPage = () => {
   if (quizStatus === 'gameOver') {
     return (
       <Layout>
-        <div className="min-h-screen bg-gradient-to-br from-green-400 via-teal-500 to-blue-600 py-6 px-4">
+        <div className="min-h-screen bg-gray-100 py-6 px-4">
           <QuizGameOver
             score={score}
             totalQuestions={totalQuestions}
@@ -87,20 +86,11 @@ const QuizPage = () => {
   }
 
   // Playing state
-  return (
+return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-600 py-6 px-4">
+      <div className="min-h-screen bg-gray-100 py-6 px-4">
         <div className="max-w-5xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-4">
-            <h1 className="text-3xl font-bold text-white mb-1">
-              🎮 Flag Quiz
-            </h1>
-            <p className="text-base text-white/90">
-              Identify the country flag
-            </p>
-          </div>
-
+          
           {/* Error Message */}
           {error && (
             <div className="max-w-2xl mx-auto mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -131,15 +121,6 @@ const QuizPage = () => {
             onNext={nextQuestion}
             isLastQuestion={questionNumber >= totalQuestions}
           />
-
-          {/* Help Text */}
-          {!feedback && (
-            <div className="text-center mt-4">
-              <p className="text-white/80 text-xs">
-                💡 Type the country name and press Enter or click Submit
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </Layout>

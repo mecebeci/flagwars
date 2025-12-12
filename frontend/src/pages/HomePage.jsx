@@ -32,13 +32,9 @@ const HomePage = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 py-6">
+      <div className="min-h-screen bg-gray-100 py-6">
         <div className="max-w-3xl mx-auto px-4">
           <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-center mb-4 text-gray-800">
-              🌍 Random Flag Test
-            </h2>
-
             {/* Loading State */}
             {loading && (
               <div className="text-center py-12">

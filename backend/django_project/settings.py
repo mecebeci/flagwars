@@ -205,18 +205,23 @@ MINIO_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', 'flagwars')
 # MinIO Connection Settings
 AWS_ACCESS_KEY_ID = os.environ.get('MINIO_ROOT_USER')
 AWS_SECRET_ACCESS_KEY = os.environ.get('MINIO_ROOT_PASSWORD')
-AWS_S3_ENDPOINT_URL = 'http://minio:9000'  # MinIO service in Docker
+AWS_S3_ENDPOINT_URL = 'http://minio:9000'  # Internal Docker access
 AWS_STORAGE_BUCKET_NAME = 'flags'
 
-# MinIO-specific settings (not AWS!)
-AWS_S3_USE_SSL = False  # Using http:// not https://
-AWS_S3_VERIFY = False  # Skip SSL verification
-AWS_AUTO_CREATE_BUCKET = True  # Create bucket automatically if missing
-AWS_DEFAULT_ACL = 'public-read'  # Make flags publicly accessible
-AWS_QUERYSTRING_AUTH = False  # Don't add auth params to URLs
+AWS_S3_CUSTOM_DOMAIN = f'localhost:9000/{AWS_STORAGE_BUCKET_NAME}'
 
-# Required by boto3 (even for MinIO)
-AWS_S3_REGION_NAME = 'us-east-1'  # Dummy value, MinIO ignores it
+# MinIO-specific settings
+AWS_S3_USE_SSL = False  # Force HTTP not HTTPS
+AWS_S3_VERIFY = False
+AWS_AUTO_CREATE_BUCKET = True
+AWS_DEFAULT_ACL = 'public-read'
+AWS_QUERYSTRING_AUTH = False
+
+# Required by boto3
+AWS_S3_REGION_NAME = 'us-east-1'
+
+# ADD THIS - Force HTTP in URLs
+AWS_S3_URL_PROTOCOL = 'http:'
 
 STORAGES = {
     'default': {

@@ -251,3 +251,26 @@ def my_leaderboard_rank(request):
             {'error': f'Failed to retrieve your rank: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def random_country(request):
+    country = Country.objects.order_by('?').first()
+    
+    if not country:
+        return Response(
+            {'error': 'No countries found in database'}, 
+            status=404
+        )
+    
+    # Get the full URL from the ImageField
+    flag_url = country.flag_image.url if country.flag_image else None
+    
+    return Response({
+        'id': country.id,
+        'name': country.name,
+        'code': country.code,
+        'flag_emoji': country.flag_emoji,
+        'flag_image_url': flag_url,
+    })

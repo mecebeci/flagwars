@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
+    'storages',
 
     # Local
     'apis',
@@ -200,3 +201,28 @@ MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', '')
 MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', '')
 MINIO_USE_SSL = os.getenv('MINIO_USE_SSL', 'False') == 'True'
 MINIO_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', 'flagwars')
+
+# MinIO Connection Settings
+AWS_ACCESS_KEY_ID = os.environ.get('MINIO_ROOT_USER')
+AWS_SECRET_ACCESS_KEY = os.environ.get('MINIO_ROOT_PASSWORD')
+AWS_S3_ENDPOINT_URL = 'http://minio:9000'  # MinIO service in Docker
+AWS_STORAGE_BUCKET_NAME = 'flags'
+
+# MinIO-specific settings (not AWS!)
+AWS_S3_USE_SSL = False  # Using http:// not https://
+AWS_S3_VERIFY = False  # Skip SSL verification
+AWS_AUTO_CREATE_BUCKET = True  # Create bucket automatically if missing
+AWS_DEFAULT_ACL = 'public-read'  # Make flags publicly accessible
+AWS_QUERYSTRING_AUTH = False  # Don't add auth params to URLs
+
+# Required by boto3 (even for MinIO)
+AWS_S3_REGION_NAME = 'us-east-1'  # Dummy value, MinIO ignores it
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}

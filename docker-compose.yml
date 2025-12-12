@@ -56,6 +56,7 @@ services:
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./backend:/app
+      - ./backend/initial_data:/app/initial_data
     ports:
       - "8000:8000"
     environment:

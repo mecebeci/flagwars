@@ -5,8 +5,9 @@ User = get_user_model()
 
 class Country(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    code = models.CharField(max_length=3, unique=True)
+    code = models.CharField(max_length=2, unique=True)
     flag_emoji = models.CharField(max_length=10)
+    flag_image = models.ImageField(upload_to='flags/', null=True, blank=True)
     aliases = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
     

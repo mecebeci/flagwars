@@ -7,7 +7,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* About Section */}
           <div>
-            <h3 className="text-lg font-bold mb-3">🏁 Flag Wars</h3>
+            <h3 className="text-lg font-bold mb-3">Flag Wars</h3>
             <p className="text-gray-400 text-sm">
               Test your knowledge of world flags in this exciting trivia game!
               Challenge yourself and compete on the leaderboard.

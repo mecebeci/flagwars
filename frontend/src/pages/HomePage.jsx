@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
 import api from '../services/api';
+import logo from '../assets/flag-wars-logo.png';
 
 const HomePage = () => {
   const { user } = useAuth();
@@ -17,16 +18,19 @@ const HomePage = () => {
 };
 
 // Landing Page for Unauthenticated Users
-// Landing Page for Unauthenticated Users
 const LandingPage = () => {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="max-w-4xl mx-auto px-4 py-12 text-center">
         {/* Hero Section */}
         <div className="bg-white rounded-lg shadow-lg p-12">
-          <h1 className="text-5xl font-bold text-gray-800 mb-4">
-            Flag Wars
-          </h1>
+          <div className="flex items-center justify-center gap-3 w-full">
+            <img 
+              src={logo} 
+              alt="Flag Wars" 
+              className="h-12 w-auto mb-2 object-contain"  
+            />
+          </div>
           <p className="text-xl text-gray-600 mb-8">
             Test your knowledge of world flags in this interactive trivia game
           </p>

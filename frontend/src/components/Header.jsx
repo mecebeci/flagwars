@@ -16,6 +16,7 @@ const Header = () => {
         <div className="flex justify-between items-center">
           {/* Logo */}
           <div className="flex items-center gap-3">
+            <span className="text-3xl">🏁</span>
             <h1 className="text-2xl font-bold text-gray-800">Flag Wars</h1>
           </div>
 
@@ -28,10 +29,16 @@ const Header = () => {
               Home
             </button>
             <button
-              onClick={() => navigate('/game')}
+              onClick={() => navigate('/learn')}
               className="text-gray-700 hover:text-blue-600 font-medium transition"
             >
-              Play Game
+              🧠 Learn Mode
+            </button>
+            <button
+              onClick={() => navigate('/quiz')}
+              className="text-gray-700 hover:text-blue-600 font-medium transition"
+            >
+              🎮 Quiz Game
             </button>
             <button
               onClick={() => navigate('/leaderboard')}

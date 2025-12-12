@@ -10,4 +10,8 @@ urlpatterns = [
     path('leaderboard/global/', views.global_leaderboard, name='global_leaderboard'),
     path('leaderboard/me/', views.my_leaderboard_rank, name='my_leaderboard_rank'),
     path('game/random-country/', views.random_country, name='random_country'),
+    path('learn/due/', views.get_due_flags, name='get_due_flags'),
+    path('learn/review/', views.submit_review, name='submit_review'),
+    path('learn/stats/', views.get_learning_stats, name='get_learning_stats'),
+    path('learn/add-new/', views.add_new_flags, name='add_new_flags'),
 ]

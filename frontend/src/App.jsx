@@ -3,6 +3,8 @@ import { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
+import LearningPage from './pages/LearningPage';
+import QuizPage from './pages/QuizPage';
 
 function App() {
   const { isAuthenticated } = useAuth();
@@ -13,19 +15,18 @@ function App() {
         {/* Public Routes */}
         <Route 
           path="/login" 
-          element={
-            isAuthenticated ? <Navigate to="/home" replace /> : <LoginPage />
-          } 
+          element={isAuthenticated ? <Navigate to="/home" replace /> : <LoginPage />} 
         />
 
         {/* Protected Routes */}
         <Route
           path="/home"
-          element={
-            <ProtectedRoute>
-              <HomePage />
-            </ProtectedRoute>
-          }
+          element={<ProtectedRoute><HomePage /></ProtectedRoute>}
+        />
+        
+        <Route
+          path="/quiz"
+          element={<ProtectedRoute><QuizPage /></ProtectedRoute>}
         />
 
         {/* Default redirect */}
@@ -36,6 +37,11 @@ function App() {
 
         {/* 404 Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
+
+        <Route
+          path="/learn"
+          element={<ProtectedRoute><LearningPage /></ProtectedRoute>}
+        />
       </Routes>
     </div>
   );

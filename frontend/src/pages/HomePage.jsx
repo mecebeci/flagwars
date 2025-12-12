@@ -9,41 +9,33 @@ const HomePage = () => {
 
   // Fetch a random country on component mount
   useEffect(() => {
-    const fetchRandomCountry = async () => {
-      try {
-        const response = await api.get('/game/random-country/');
-        setCountry(response.data);
-        setError('');
-      } catch (err) {
-        setError('Failed to load country data');
-        console.error('Error fetching country:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchRandomCountry();
   }, []);
 
-  const handleNewFlag = async () => {
-    setLoading(true);
+  const fetchRandomCountry = async () => {
     try {
+      setLoading(true);
       const response = await api.get('/game/random-country/');
       setCountry(response.data);
       setError('');
     } catch (err) {
       setError('Failed to load country data');
+      console.error('Error fetching country:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleNewFlag = () => {
+    fetchRandomCountry();
+  };
+
   return (
     <Layout>
-      <div className="bg-gradient-to-br from-green-400 to-blue-500 min-h-full py-12">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="bg-white rounded-lg shadow-2xl p-8">
-            <h2 className="text-3xl font-bold text-center mb-8 text-gray-800">
+      <div className="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 py-6">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-center mb-4 text-gray-800">
               🌍 Random Flag Test
             </h2>
 
@@ -64,32 +56,35 @@ const HomePage = () => {
             {/* Country Display */}
             {!loading && country && (
               <div className="space-y-6">
-                {/* Flag Image */}
+                {/* Flag Image - FIXED HEIGHT CONTAINER */}
                 <div className="flex justify-center">
-                  <img
-                    src={country.flag_image_url}
-                    alt={`Flag of ${country.name}`}
-                    className="w-full max-w-md rounded-lg shadow-lg border-4 border-gray-200"
-                    onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/400x300?text=Flag+Not+Found';
-                    }}
-                  />
+                  <div className="w-full max-w-md h-64 flex items-center justify-center">
+                    <img
+                      src={country.flag_image_url}
+                      alt={`Flag of ${country.name}`}
+                      className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/400x300?text=Flag+Not+Found';
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {/* Country Info */}
-                <div className="text-center space-y-2">
-                  <h3 className="text-2xl font-bold text-gray-800">{country.name}</h3>
-                  <p className="text-gray-600">Code: {country.code}</p>
-                  <p className="text-gray-600">Region: {country.region || 'N/A'}</p>
+                <div className="text-center space-y-1">
+                  <h3 className="text-xl font-bold text-gray-800">{country.name}</h3>
+                  <p className="text-sm text-gray-600">Code: {country.code}</p>
+                  {country.region && <p className="text-gray-600">Region: {country.region}</p>}
                 </div>
 
                 {/* Get New Flag Button */}
                 <div className="text-center">
                   <button
                     onClick={handleNewFlag}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                    disabled={loading}
+                    className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Get Another Random Flag
+                    🎲 Get Another Random Flag
                   </button>
                 </div>
               </div>

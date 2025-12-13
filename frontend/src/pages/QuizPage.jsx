@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import useQuiz from '../hooks/useQuiz';
 import QuizCard from '../components/quiz/QuizCard';
@@ -12,7 +13,7 @@ const QuizPage = () => {
     score,
     skipsRemaining,
     countriesViewed,
-    totalCountries,  // ✅ Already coming from useQuiz
+    totalCountries,
     userAnswer,
     setUserAnswer,
     feedback,
@@ -25,8 +26,31 @@ const QuizPage = () => {
     restartQuiz,
   } = useQuiz();
 
-  // ❌ DELETE THIS LINE - totalCountries already comes from useQuiz
-  // const [totalCountries, setTotalCountries] = useState(192);
+  // ⏱️ Timer State
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // ⏱️ Timer Effect - Runs only when quiz is active
+  useEffect(() => {
+    // Only run timer when quiz is in 'playing' status
+    if (quizStatus !== 'playing') {
+      return;
+    }
+
+    // Start interval timer
+    const timer = setInterval(() => {
+      setElapsedSeconds(prev => prev + 1);
+    }, 1000);
+
+    // Cleanup: Stop timer when component unmounts or status changes
+    return () => clearInterval(timer);
+  }, [quizStatus]);
+
+  // ⏱️ Reset timer when quiz restarts
+  useEffect(() => {
+    if (quizStatus === 'idle') {
+      setElapsedSeconds(0);
+    }
+  }, [quizStatus]);
 
   // Idle state - Start screen
   if (quizStatus === 'idle') {
@@ -84,7 +108,8 @@ const QuizPage = () => {
           <QuizGameOver
             score={score}
             countriesViewed={countriesViewed}
-            totalCountries={totalCountries}  // ✅ Pass it here
+            totalCountries={totalCountries}
+            elapsedSeconds={elapsedSeconds}  // ⏱️ Pass time to GameOver screen
             onRestart={restartQuiz}
           />
         </div>
@@ -120,6 +145,7 @@ const QuizPage = () => {
             skipsRemaining={skipsRemaining}
             countriesViewed={countriesViewed}
             totalCountries={totalCountries}
+            elapsedSeconds={elapsedSeconds}  // ⏱️ Pass elapsed time
           />
 
           {/* Quiz Card */}
@@ -140,10 +166,10 @@ const QuizPage = () => {
           {/* Give Up Button */}
           <div className="text-center mt-6">
             <button
-              onClick={finishQuiz}
+              onClick={() => finishQuiz(elapsedSeconds)}  // ⏱️ Pass elapsedSeconds
               className="bg-red-600 text-white px-8 py-3 rounded-lg font-semibold text-base hover:bg-red-700 transition shadow-lg"
             >
-              🏳️ Give Up
+              Give Up
             </button>
           </div>
 

@@ -238,24 +238,28 @@ const useQuiz = () => {
   };
 
   // Give up / Finish quiz
-  const finishQuiz = async () => {
+  const finishQuiz = async (elapsedSeconds = 0) => {
     try {
       setLoading(true);
-      
+
       // Clear any pending auto-checks
       if (checkTimeoutRef.current) {
         clearTimeout(checkTimeoutRef.current);
       }
+
+      // ⏱️ Send elapsed time to backend
+      const response = await api.post('/game/finish/', {
+        time_elapsed_seconds: elapsedSeconds
+      });
       
-      const response = await api.post('/game/finish/');
       console.log('Game finished:', response.data);
-      
+
       // Update final stats
       if (response.data.stats) {
         setScore(response.data.stats.final_score);
         setCountriesViewed(response.data.stats.countries_viewed);
       }
-      
+
       setQuizStatus('gameOver');
     } catch (err) {
       console.error('Failed to finish quiz:', err);

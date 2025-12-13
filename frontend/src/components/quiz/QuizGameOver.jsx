@@ -1,11 +1,24 @@
-const QuizGameOver = ({ score, countriesViewed, totalCountries = 192, onRestart }) => {
+const QuizGameOver = ({ 
+  score, 
+  countriesViewed, 
+  totalCountries = 192, 
+  elapsedSeconds = 0,  // ⏱️ NEW prop
+  onRestart 
+}) => {
   const isAllCompleted = countriesViewed >= totalCountries;
-  
+
+  // ⏱️ Format seconds to MM:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   // Determine performance level
   let performanceEmoji = '🎉';
   let performanceText = 'Great Job!';
   let performanceColor = 'text-green-600';
-  
+
   if (isAllCompleted) {
     performanceEmoji = '🏆';
     performanceText = 'Perfect! All Flags Completed!';
@@ -25,7 +38,7 @@ const QuizGameOver = ({ score, countriesViewed, totalCountries = 192, onRestart 
       <div className="bg-white rounded-xl shadow-lg p-6 text-center">
         {/* Performance Emoji */}
         <div className="text-6xl mb-4">{performanceEmoji}</div>
-        
+
         {/* Title */}
         <h1 className={`text-3xl font-bold mb-2 ${performanceColor}`}>
           {performanceText}
@@ -44,7 +57,7 @@ const QuizGameOver = ({ score, countriesViewed, totalCountries = 192, onRestart 
         )}
 
         {/* Score Display */}
-        <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl p-8 mb-6 text-white">
+        <div className="bg-slate-800 rounded-xl p-8 mb-6 text-white">
           <p className="text-lg font-semibold mb-3 opacity-90">
             Final Score
           </p>
@@ -57,7 +70,7 @@ const QuizGameOver = ({ score, countriesViewed, totalCountries = 192, onRestart 
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-4 gap-4 mb-6">  {/* ⏱️ Changed to 4 columns */}
           <div className="bg-blue-50 rounded-lg p-4">
             <p className="text-xs text-blue-600 font-semibold uppercase mb-1">
               Flags Viewed
@@ -66,6 +79,17 @@ const QuizGameOver = ({ score, countriesViewed, totalCountries = 192, onRestart 
               {countriesViewed}/{totalCountries}
             </p>
           </div>
+
+          {/* ⏱️ NEW: Time Taken */}
+          <div className="bg-indigo-50 rounded-lg p-4">
+            <p className="text-xs text-indigo-600 font-semibold uppercase mb-1">
+              Time
+            </p>
+            <p className="text-2xl font-bold text-indigo-700">
+              {formatTime(elapsedSeconds)}
+            </p>
+          </div>
+
           <div className="bg-green-50 rounded-lg p-4">
             <p className="text-xs text-green-600 font-semibold uppercase mb-1">
               Accuracy
@@ -74,6 +98,7 @@ const QuizGameOver = ({ score, countriesViewed, totalCountries = 192, onRestart 
               {countriesViewed > 0 ? Math.round((score / countriesViewed) * 100) : 0}%
             </p>
           </div>
+
           <div className="bg-purple-50 rounded-lg p-4">
             <p className="text-xs text-purple-600 font-semibold uppercase mb-1">
               Completion
@@ -90,21 +115,19 @@ const QuizGameOver = ({ score, countriesViewed, totalCountries = 192, onRestart 
             onClick={onRestart}
             className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold text-base hover:bg-blue-700 transition shadow-lg"
           >
-            🔄 Play Again
+            Play Again
           </button>
-          
           <button
             onClick={() => window.location.href = '/leaderboard'}
             className="w-full bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold text-base hover:bg-purple-700 transition shadow-lg"
           >
-            🏆 View Leaderboard
+            View Leaderboard
           </button>
-          
           <button
             onClick={() => window.location.href = '/home'}
             className="w-full bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold text-base hover:bg-gray-300 transition shadow-lg"
           >
-            🏠 Back to Home
+            Back to Home
           </button>
         </div>
       </div>

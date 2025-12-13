@@ -23,7 +23,7 @@ class GameSession(models.Model):
         related_name='game_sessions'
     )
     
-    # New fields for endless mode:
+    # Fields for endless mode
     current_country_id = models.IntegerField(null=True, blank=True)  # Current flag showing
     viewed_countries = models.JSONField(default=list)  # Countries already shown
     score = models.IntegerField(default=0)  # Correct answers only

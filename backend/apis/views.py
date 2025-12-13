@@ -289,6 +289,17 @@ def skip_question(request):
 
 
 @extend_schema(
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'time_elapsed_seconds': {
+                    'type': 'integer',
+                    'description': 'Elapsed time in seconds from frontend timer'
+                }
+            }
+        }
+    },
     responses={
         200: GameSessionSerializer,
         404: OpenApiResponse(description='No active game found')
@@ -313,23 +324,31 @@ def finish_game(request):
             status=status.HTTP_404_NOT_FOUND
         )
     
-    # Calculate elapsed time
-    time_elapsed = (timezone.now() - game_session.started_at).total_seconds()
-    game_session.time_elapsed_seconds = int(time_elapsed)
+    # ⏱️ Get elapsed time from frontend timer (more accurate than backend calculation)
+    frontend_time = request.data.get('time_elapsed_seconds')
+    
+    if frontend_time is not None:
+        # Use frontend timer value
+        game_session.time_elapsed_seconds = int(frontend_time)
+    else:
+        # Fallback: Calculate elapsed time from backend (if frontend didn't send it)
+        time_elapsed = (timezone.now() - game_session.started_at).total_seconds()
+        game_session.time_elapsed_seconds = int(time_elapsed)
     
     # Mark as completed
     game_session.is_completed = True
     game_session.completed_at = timezone.now()
     game_session.save()
-
+    
     # Update leaderboard with final score
     update_leaderboard_async.delay(request.user.id, game_session.score)
     calculate_user_statistics.delay(request.user.id)
-
+    
     # Prepare response
     serializer = GameSessionSerializer(game_session)
     
     # Calculate stats
+    time_elapsed = game_session.time_elapsed_seconds
     flags_per_minute = (len(game_session.viewed_countries) / time_elapsed * 60) if time_elapsed > 0 else 0
     
     return Response({

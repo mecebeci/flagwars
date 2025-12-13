@@ -82,3 +82,15 @@ export const getLeaderboard = async () => {
   const response = await api.get('leaderboard/');
   return response.data;
 };
+
+
+// Profile
+export const getUserStats = async () => {
+  const response = await api.get('/auth/profile/stats/');
+  return response.data;
+};
+
+export const getRecentGames = async () => {
+  const response = await api.get('/auth/profile/games/');
+  return response.data;
+};

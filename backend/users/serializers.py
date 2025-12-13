@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from apis.models import GameSession
 
 User = get_user_model()
 
@@ -42,3 +43,41 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['email'] = user.email
 
         return token
+    
+
+class UserStatsSerializer(serializers.Serializer):
+    """User statistics summary"""
+    total_games = serializers.IntegerField()
+    completed_games = serializers.IntegerField()
+    best_score = serializers.IntegerField()
+    best_time = serializers.IntegerField()
+    average_score = serializers.FloatField()
+    total_correct_answers = serializers.IntegerField()
+    total_flags_viewed = serializers.IntegerField()
+    member_since = serializers.DateTimeField()
+
+class RecentGameSerializer(serializers.ModelSerializer):
+    """Serializer for recent game history"""
+    completion_percentage = serializers.SerializerMethodField()
+    countries_viewed = serializers.SerializerMethodField()  # Changed
+    
+    class Meta:
+        model = GameSession
+        fields = [
+            'id',
+            'score',
+            'time_elapsed_seconds',
+            'completed_at',
+            'countries_viewed',
+            'completion_percentage',
+            'is_completed'
+        ]
+        read_only_fields = fields
+    
+    def get_countries_viewed(self, obj):
+        return len(obj.viewed_countries)  # Get length of JSONField list
+    
+    def get_completion_percentage(self, obj):
+        total_countries = 192
+        countries_count = len(obj.viewed_countries)
+        return round((countries_count / total_countries) * 100)

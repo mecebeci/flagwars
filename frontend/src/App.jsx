@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage';
 import HomePage from './pages/HomePage';
 import QuizPage from './pages/QuizPage';
 import LeaderboardPage from './pages/LeaderboardPage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   const { isAuthenticated } = useAuth();
@@ -28,6 +29,9 @@ function App() {
 
         {/* Leaderboard */}
         <Route path="/leaderboard" element={<LeaderboardPage />} />
+
+        {/* Profile page */}
+        <Route path="/profile" element={<ProfilePage />} />
 
         {/* Protected Routes */}
         <Route

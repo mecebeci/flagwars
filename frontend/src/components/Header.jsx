@@ -16,7 +16,10 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <div 
+            onClick={() => navigate('/home')} 
+            className="flex items-center gap-3 cursor-pointer"
+          >
             <img 
               src={logo} 
               alt="Flag Wars" 

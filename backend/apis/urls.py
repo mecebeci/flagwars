@@ -8,7 +8,6 @@ urlpatterns = [
     path('game/skip/', views.skip_question, name='skip_question'),
     path('game/finish/', views.finish_game, name='finish_game'),
     path('game/history/', views.game_history, name='game_history'),
-    path('leaderboard/global/', views.global_leaderboard, name='global_leaderboard'),
-    path('leaderboard/me/', views.my_leaderboard_rank, name='my_leaderboard_rank'),
     path('game/random-country/', views.random_country, name='random_country'),
+    path('leaderboard/', views.get_leaderboard, name='leaderboard'),
 ]

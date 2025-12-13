@@ -33,3 +33,19 @@ class GameSessionSerializer(serializers.ModelSerializer):
             'is_completed'
         ]
         read_only_fields = ['id', 'started_at', 'completed_at']
+
+
+class LeaderboardEntrySerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = GameSession
+        fields = [
+            'id',
+            'username',
+            'score',
+            'time_elapsed_seconds',
+            'completed_at',
+            'viewed_countries'
+        ]
+        read_only_fields = fields

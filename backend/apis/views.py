@@ -13,7 +13,7 @@ import random
 
 
 # ============================================
-# GAME ENDPOINTS - NEW ENDLESS MODE
+# GAME ENDPOINTS
 # ============================================
 
 @extend_schema(
@@ -27,12 +27,6 @@ import random
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def start_game(request):
-    """
-    Start new endless game session
-    - No pre-selection of questions
-    - Player gets random flags
-    - Game continues until player gives up
-    """
     # Check if there are countries in database
     if Country.objects.count() < 1:
         return Response(
@@ -74,11 +68,6 @@ def start_game(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_question(request):
-    """
-    Get current flag or new random flag
-    - Returns unviewed country
-    - Auto-completes game when all countries viewed
-    """
     try:
         game_session = GameSession.objects.filter(
             user=request.user,
@@ -380,77 +369,6 @@ def game_history(request):
         'games': serializer.data
     }, status=status.HTTP_200_OK)
 
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def global_leaderboard(request):
-    """Get global leaderboard"""
-    from apis.services import LeaderboardService
-    from users.models import User
-
-    try:
-        leaderboard_service = LeaderboardService()
-        top_players = leaderboard_service.get_top_player(limit=100)
-        
-        if not top_players:
-            return Response({
-                'leaderboard': [],
-                'message': 'No leaderboard data available'
-            }, status=status.HTTP_200_OK)
-        
-        user_ids = [player['user_id'] for player in top_players]
-        users = User.objects.filter(id__in=user_ids).values('id', 'username')
-        user_map = {user['id']: user['username'] for user in users}
-
-        for player in top_players:
-            player['username'] = user_map.get(player['user_id'], 'Unknown')
-        
-        return Response({
-            'leaderboard': top_players,
-            'total_players': len(top_players)
-        }, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response(
-            {'error': f'Failed to retrieve leaderboard: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def my_leaderboard_rank(request):
-    """Get current user's leaderboard rank"""
-    from apis.services import LeaderboardService
-    
-    try:
-        leaderboard_service = LeaderboardService()
-        user_rank_data = leaderboard_service.get_user_rank(request.user.id)
-        
-        if not user_rank_data:
-            return Response({
-                'message': 'You are not on the leaderboard yet. Finish a game to get ranked!',
-                'rank': None,
-                'score': 0
-            }, status=status.HTTP_200_OK)
-        
-        total_players = leaderboard_service.redis_client.zcard(
-            LeaderboardService.LEADERBOARD_KEY
-        )
-        
-        return Response({
-            'rank': user_rank_data['rank'],
-            'user_id': request.user.id,
-            'username': request.user.username,
-            'score': user_rank_data['score'],
-            'total_players': total_players
-        }, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response(
-            {'error': f'Failed to retrieve your rank: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def random_country(request):
@@ -471,3 +389,51 @@ def random_country(request):
         'code': country.code,
         'flag_image_url': flag_url,
     })
+
+@extend_schema(
+    responses={
+        200: LeaderboardEntrySerializer(many=True),
+    },
+    description="Get top 10 players ranked by their best performance (score DESC, time ASC). One entry per user.",
+    summary="Global Leaderboard - Top 10 Players"
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_leaderboard(request):    
+    # Get all completed sessions, grouped by best performance per user
+    from django.db.models import OuterRef, Subquery
+    
+    # Subquery to find each user's best session
+    # Best = highest score, then fastest time
+    best_sessions = GameSession.objects.filter(
+        user=OuterRef('user'),
+        is_completed=True
+    ).order_by(
+        '-score',
+        'time_elapsed_seconds'
+    ).values('id')[:1]
+    
+    # Get the actual best session for each user
+    leaderboard = GameSession.objects.filter(
+        id__in=Subquery(best_sessions),
+        is_completed=True
+    ).select_related('user').order_by(
+        '-score',
+        'time_elapsed_seconds',
+        'completed_at'
+    )[:10]
+    
+    serializer = LeaderboardEntrySerializer(leaderboard, many=True)
+    
+    # Add rank to each entry
+    leaderboard_data = []
+    for rank, entry in enumerate(serializer.data, start=1):
+        leaderboard_data.append({
+            'rank': rank,
+            **entry
+        })
+    
+    return Response({
+        'leaderboard': leaderboard_data,
+        'total_entries': len(leaderboard_data)
+    }, status=status.HTTP_200_OK)

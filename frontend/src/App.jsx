@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import HomePage from './pages/HomePage';
 import QuizPage from './pages/QuizPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 
 function App() {
   const { isAuthenticated } = useAuth();
@@ -24,6 +25,9 @@ function App() {
 
         {/* Home Page - Shows landing page OR authenticated home based on auth status */}
         <Route path="/" element={<HomePage />} />
+
+        {/* Leaderboard */}
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
 
         {/* Protected Routes */}
         <Route

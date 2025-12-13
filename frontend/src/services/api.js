@@ -75,3 +75,10 @@ export const clearAuthTokens = () => {
 export const getAccessToken = () => {
   return localStorage.getItem('access_token');
 };
+
+
+// Leaderboard
+export const getLeaderboard = async () => {
+  const response = await api.get('leaderboard/');
+  return response.data;
+};

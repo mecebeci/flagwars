@@ -54,7 +54,7 @@ def update_leaderboard_async(user_id, score):
 @shared_task
 def calculate_user_statistics(user_id):
     from apis.models import GameSession
-    from django.db.models import Count, Avg, Max, Sum
+    from django.db.models import Avg, Max, Sum
     import redis
     from django.conf import settings
     import json
@@ -85,15 +85,16 @@ def calculate_user_statistics(user_id):
             stats = user_sessions.aggregate(
                 avg_score=Avg('score'),
                 best_score=Max('score'),
-                total_score=Sum('score'),
-                total_questions=Sum('total_questions')
+                total_score=Sum('score')
             )
+            
+            # Calculate total questions by counting viewed countries across all sessions
+            total_questions = sum(len(session.viewed_countries) for session in user_sessions)
             
             # Extract values with defaults
             avg_score = float(stats.get('avg_score') or 0)
             best_score = int(stats.get('best_score') or 0)
             total_score = int(stats.get('total_score') or 0)
-            total_questions = int(stats.get('total_questions') or 0)
             
             # Calculate accuracy percentage
             accuracy = (total_score / total_questions * 100) if total_questions > 0 else 0.0

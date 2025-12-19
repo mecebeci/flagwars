@@ -15,20 +15,16 @@ const QuizGameOver = ({
   };
 
   // Determine performance level
-  let performanceEmoji = '🎉';
   let performanceText = 'Great Job!';
   let performanceColor = 'text-green-600';
 
   if (isAllCompleted) {
-    performanceEmoji = '🏆';
     performanceText = 'Perfect! All Flags Completed!';
     performanceColor = 'text-yellow-600';
-  } else if (score === 0) {
-    performanceEmoji = '😅';
+  } else if (score <= 50) {
     performanceText = 'Keep Practicing!';
     performanceColor = 'text-orange-600';
   } else if (score >= 100) {
-    performanceEmoji = '🎖️';
     performanceText = 'Excellent!';
     performanceColor = 'text-blue-600';
   }
@@ -36,9 +32,6 @@ const QuizGameOver = ({
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-        {/* Performance Emoji */}
-        <div className="text-6xl mb-4">{performanceEmoji}</div>
-
         {/* Title */}
         <h1 className={`text-3xl font-bold mb-2 ${performanceColor}`}>
           {performanceText}
@@ -51,7 +44,7 @@ const QuizGameOver = ({
         {isAllCompleted && (
           <div className="bg-yellow-100 border-2 border-yellow-500 rounded-lg p-4 mb-6">
             <p className="text-lg font-bold text-yellow-800">
-              🌍 You've seen all {totalCountries} flags in the world!
+              You've seen all {totalCountries} flags in the world!
             </p>
           </div>
         )}
@@ -70,15 +63,16 @@ const QuizGameOver = ({
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-4 gap-4 mb-6">  {/* ⏱️ Changed to 4 columns */}
-          <div className="bg-blue-50 rounded-lg p-4">
-            <p className="text-xs text-blue-600 font-semibold uppercase mb-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          <div className="bg-blue-50 rounded-lg p-3 sm:p-4 text-center">
+            <p className="text-[10px] sm:text-xs text-blue-600 font-semibold uppercase mb-1">
               Flags Viewed
             </p>
-            <p className="text-2xl font-bold text-blue-700">
+            <p className="text-xl sm:text-2xl font-bold text-blue-700">
               {countriesViewed}/{totalCountries}
             </p>
           </div>
+
 
           {/* ⏱️ NEW: Time Taken */}
           <div className="bg-indigo-50 rounded-lg p-4">
@@ -95,7 +89,7 @@ const QuizGameOver = ({
               Accuracy
             </p>
             <p className="text-2xl font-bold text-green-700">
-              {countriesViewed > 0 ? Math.round((score / countriesViewed) * 100) : 0}%
+              {countriesViewed > 0 ? ((score / countriesViewed) * 100).toFixed(1) : 0}%
             </p>
           </div>
 
@@ -104,7 +98,7 @@ const QuizGameOver = ({
               Completion
             </p>
             <p className="text-2xl font-bold text-purple-700">
-              {Math.round((countriesViewed / totalCountries) * 100)}%
+              {((countriesViewed / totalCountries) * 100).toFixed(1)}%
             </p>
           </div>
         </div>

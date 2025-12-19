@@ -114,6 +114,20 @@ services:
       redis:
         condition: service_healthy
 
+  flower:
+      image: mher/flower:2.0
+      container_name: flagwars_flower
+      command: celery --broker=redis://:${REDIS_PASSWORD}@redis:6379/0 flower --port=5555 --basic-auth=${FLOWER_USER}:${FLOWER_PASSWORD}
+      ports:
+        - "5555:5555"
+      depends_on:
+        - redis
+        - celery_worker
+      environment:
+        - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+        - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/0
+        - REDIS_PASSWORD=${REDIS_PASSWORD}
+
 volumes:
   postgres_data:
   redis_data:

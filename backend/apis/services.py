@@ -3,7 +3,7 @@ from django.conf import settings
 from typing import List, Dict, Optional
 from datetime import timedelta
 from django.utils import timezone
-from .models import UserFlagProgress, Country
+from .models import Country
 
 class LeaderboardService:
     LEADERBOARD_KEY = 'flagwars:leaderboard'

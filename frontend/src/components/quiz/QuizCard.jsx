@@ -62,7 +62,7 @@ const QuizCard = ({ question, userAnswer, onAnswerChange, onAutoCheck, onSkip, s
         {/* Question */}
         <div className="text-center mb-4">
           <h2 className="text-xl font-bold text-gray-800 mb-2">
-            🌍 Which country is this?
+            Which country is this?
           </h2>
           <p className="text-sm text-gray-500">
             Country Code: {question.code}

@@ -14,15 +14,9 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Routes>
-        {/* Public Routes - Redirect to home if already authenticated */}
-        <Route 
-          path="/login" 
-          element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} 
-        />
-        <Route 
-          path="/register" 
-          element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />} 
-        />
+        {/* Public Routes - No automatic redirect, let pages handle it */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
 
         {/* Home Page - Shows landing page OR authenticated home based on auth status */}
         <Route path="/" element={<HomePage />} />

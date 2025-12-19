@@ -1,33 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  
+  const { isAuthenticated } = useAuth();
+
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
-    password2: ''
+    password2: '',
   });
-  
+
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  // Redirect logged-in users
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Redirect to login after success (2 seconds)
+  useEffect(() => {
+    if (!isSuccess) return;
+
+    const timer = setTimeout(() => {
+      navigate('/login');
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [isSuccess, navigate]);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-    // Clear error for this field when user starts typing
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+
     if (errors[e.target.name]) {
-      setErrors({
-        ...errors,
-        [e.target.name]: ''
-      });
+      setErrors((prev) => ({
+        ...prev,
+        [e.target.name]: '',
+      }));
     }
   };
 
@@ -36,21 +55,24 @@ const RegisterPage = () => {
     setLoading(true);
     setErrors({});
 
+    // Frontend password check
+    if (formData.password !== formData.password2) {
+      setErrors({ password2: 'Passwords do not match' });
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await api.post('/auth/register/', formData);
+      // Just register, don't auto-login
+      await api.post('/auth/register/', formData);
       
-      // Store tokens (backend returns them automatically)
-      login(response.data.access, response.data.refresh, response.data.user);
-      
-      // Navigate to homepage
-      navigate('/');
+      setIsSuccess(true);
     } catch (err) {
       if (err.response?.data) {
         setErrors(err.response.data);
       } else {
         setErrors({ general: 'Registration failed. Please try again.' });
       }
-    } finally {
       setLoading(false);
     }
   };
@@ -58,10 +80,10 @@ const RegisterPage = () => {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full">
-        {/* Back to Home Link */}
+        {/* Back to Home */}
         <div className="text-center mb-6">
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className="text-sm text-gray-600 hover:text-blue-600 font-medium inline-flex items-center transition"
           >
             <span className="mr-1">←</span> Back to Home
@@ -71,8 +93,18 @@ const RegisterPage = () => {
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-800">Create Account</h2>
-            <p className="text-gray-600 mt-2">Join Flag Wars and start learning!</p>
+            <p className="text-gray-600 mt-2">
+              Join Flag Wars and start learning!
+            </p>
           </div>
+
+          {/* Success Banner */}
+          {isSuccess && (
+            <div className="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+              <p className="font-semibold">Registration successful!</p>
+              <p className="text-sm">Redirecting to login page...</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* General Error */}
@@ -84,36 +116,37 @@ const RegisterPage = () => {
 
             {/* Username */}
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Username
               </label>
               <input
-                id="username"
                 name="username"
-                type="text"
                 value={formData.username}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isSuccess}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
               {errors.username && (
-                <p className="text-red-600 text-sm mt-1">{errors.username}</p>
+                <p className="text-red-600 text-sm mt-1">
+                  {errors.username}
+                </p>
               )}
             </div>
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email
               </label>
               <input
-                id="email"
-                name="email"
                 type="email"
+                name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isSuccess}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
               {errors.email && (
                 <p className="text-red-600 text-sm mt-1">{errors.email}</p>
@@ -122,47 +155,51 @@ const RegisterPage = () => {
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
               <input
-                id="password"
-                name="password"
                 type="password"
+                name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isSuccess}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
               {errors.password && (
-                <p className="text-red-600 text-sm mt-1">{errors.password}</p>
+                <p className="text-red-600 text-sm mt-1">
+                  {errors.password}
+                </p>
               )}
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label htmlFor="password2" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Confirm Password
               </label>
               <input
-                id="password2"
-                name="password2"
                 type="password"
+                name="password2"
                 value={formData.password2}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isSuccess}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
               {errors.password2 && (
-                <p className="text-red-600 text-sm mt-1">{errors.password2}</p>
+                <p className="text-red-600 text-sm mt-1">
+                  {errors.password2}
+                </p>
               )}
             </div>
 
-            {/* Submit Button */}
+            {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || isSuccess}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>
@@ -172,7 +209,10 @@ const RegisterPage = () => {
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               Already have an account?{' '}
-              <Link to="/login" className="text-blue-600 hover:text-blue-700 font-semibold">
+              <Link
+                to="/login"
+                className="text-blue-600 hover:text-blue-700 font-semibold"
+              >
                 Log in
               </Link>
             </p>

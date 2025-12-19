@@ -125,7 +125,7 @@ const QuizPage = () => {
           {/* Header */}
           <div className="text-center mb-4">
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              🎮 Flag Challenge - Endless Mode
+              Flag Challenge
             </h1>
             <p className="text-base text-gray-600">
               Get as many correct as you can!

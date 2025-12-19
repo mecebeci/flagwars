@@ -54,7 +54,7 @@ const LandingPage = () => {
 
         {/* Additional Info */}
         <p className="text-gray-500 mt-8">
-          Free to play • Start learning today
+          Free to play
         </p>
       </div>
     </div>

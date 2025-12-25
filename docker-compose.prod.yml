@@ -1,0 +1,231 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # Main Nginx - Reverse Proxy & Gateway
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: flagwars_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_volume:/app/staticfiles:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - flagwars_network
+    restart: unless-stopped
+
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  db:
+    image: postgres:15-alpine
+    container_name: flagwars_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: flagwars
+      POSTGRES_USER: flagwars_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+    networks:
+      - flagwars_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flagwars_user -d flagwars"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Redis - Cache & Message Broker
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: flagwars_redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - flagwars_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # MinIO - Object Storage
+  # ============================================
+  minio:
+    image: minio/minio:latest
+    container_name: flagwars_minio
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    command: server /data --console-address ":9001"
+    networks:
+      - flagwars_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # ============================================
+  # Django Backend with Gunicorn
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: flagwars_backend
+    volumes:
+      - static_volume:/app/staticfiles
+    environment:
+      DEBUG: "False"
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      SECRET_KEY: ${SECRET_KEY}
+      # Database configuration
+      POSTGRES_DB: flagwars
+      POSTGRES_USER: flagwars_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      # Redis configuration
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      # MinIO configuration
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_USE_SSL: "False"
+      MINIO_BUCKET_NAME: flags
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - flagwars_network
+    restart: unless-stopped
+
+  # ============================================
+  # React Frontend (Pre-built Static Files)
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: flagwars_frontend
+    networks:
+      - flagwars_network
+    restart: unless-stopped
+
+  # ============================================
+  # Celery Worker - Background Tasks
+  # ============================================
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: flagwars_celery_worker
+    command: celery -A django_project worker --loglevel=info
+    environment:
+      DEBUG: "False"
+      SECRET_KEY: ${SECRET_KEY}
+      # Database configuration
+      POSTGRES_DB: flagwars
+      POSTGRES_USER: flagwars_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      # Redis configuration
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      # MinIO configuration
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_USE_SSL: "False"
+      MINIO_BUCKET_NAME: flags
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+
+    depends_on:
+      - redis
+      - db
+    networks:
+      - flagwars_network
+    restart: unless-stopped
+
+  # ============================================
+  # Celery Beat - Scheduled Tasks (Optional)
+  # ============================================
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: flagwars_celery_beat
+    command: celery -A django_project beat --loglevel=info
+    environment:
+      DEBUG: "False"
+      SECRET_KEY: ${SECRET_KEY}
+      # Database configuration
+      POSTGRES_DB: flagwars
+      POSTGRES_USER: flagwars_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      # Redis configuration
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_USE_SSL: "False"
+      MINIO_BUCKET_NAME: flags
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+
+    depends_on:
+      - redis
+      - db
+    networks:
+      - flagwars_network
+    restart: unless-stopped
+
+# ============================================
+# Named Volumes - Persistent Data
+# ============================================
+volumes:
+  postgres_data:
+    name: flagwars_postgres_data
+  redis_data:
+    name: flagwars_redis_data
+  minio_data:
+    name: flagwars_minio_data
+  static_volume:
+    name: flagwars_static_volume
+
+# ============================================
+# Network - Internal Communication
+# ============================================
+networks:
+  flagwars_network:
+    name: flagwars_network
+    driver: bridge

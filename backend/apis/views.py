@@ -10,6 +10,8 @@ from apis.tasks import update_leaderboard_async, calculate_user_statistics
 from .models import Country, GameSession
 from .serializers import *
 import random
+import unicodedata
+import re
 
 
 # ============================================
@@ -165,7 +167,7 @@ def submit_answer(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    answer = serializer.validated_data['answer'].strip().lower()
+    answer = normalize_answer(serializer.validated_data['answer'])
 
     try:
         game_session = GameSession.objects.filter(
@@ -193,19 +195,15 @@ def submit_answer(request):
         )
     
     # Build list of correct answers
-    correct_answers = [country.name.lower()] + [alias.lower() for alias in country.aliases]
+    correct_answers = [
+    normalize_answer(country.name),
+    *[normalize_answer(alias) for alias in country.aliases]
+    ]
     
     # FLEXIBLE MATCHING: Also accept if answer is contained in name
     # Example: "taiwan" matches "Taiwan, Province of China"
     is_correct = answer in correct_answers
     
-    # If not exact match, check if user's answer is a significant part of the name
-    if not is_correct and len(answer) >= 4:
-        country_name_lower = country.name.lower()
-        # Check if answer is the first word of the country name
-        first_word = country_name_lower.split(',')[0].strip()
-        if answer == first_word:
-            is_correct = True
 
     if is_correct:
         game_session.score += 1
@@ -437,3 +435,12 @@ def get_leaderboard(request):
         'leaderboard': leaderboard_data,
         'total_entries': len(leaderboard_data)
     }, status=status.HTTP_200_OK)
+
+
+def normalize_answer(value: str) -> str:
+    value = value.strip().lower()
+    value = unicodedata.normalize('NFD', value)
+    value = ''.join(c for c in value if unicodedata.category(c) != 'Mn')
+    value = re.sub(r'[^a-z\s-]', '', value)
+    value = re.sub(r'\s+', ' ', value)
+    return value

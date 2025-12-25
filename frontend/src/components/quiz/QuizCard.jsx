@@ -92,7 +92,7 @@ const QuizCard = ({ question, userAnswer, onAnswerChange, onAutoCheck, onSkip, s
             disabled={loading || skipsRemaining <= 0}
             className="bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold text-base hover:bg-orange-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            ⏭️ Skip ({skipsRemaining})
+            Skip ({skipsRemaining})
           </button>
         </div>
       </div>

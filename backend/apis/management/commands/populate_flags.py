@@ -9,8 +9,10 @@ class Command(BaseCommand):
     help = 'Populate Country model with flag images from initial_data/flags/'
 
     EXCLUDED_COUNTRIES = [
-        'IL',
-        'CY',
+        'IL', 'CY', 'AX', 'AS', 'AI', 'AQ', 'AW', 'BM', 'BQ', 'BV', 'IO', 'KY', 'CX', 
+        'CC', 'CK', 'CW', 'FK', 'FO', 'GF', 'PF', 'TF', 'GI', 'GP', 'GU', 'GG', 'HK',
+        'IM', 'JE', 'MO', 'MQ', 'YT', 'MS', 'NC', 'NU', 'NF', 'MP', 'PN', 'RE', 'BL', 
+        'SH', 'MF', 'PM', 'SX', 'GS', 'SJ', 'TK', 'TC', 'UM', 'VG', 'VI', 'WF', 'EH'
     ]
 
     def handle(self, *args, **options):

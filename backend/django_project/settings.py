@@ -212,7 +212,7 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('MINIO_ROOT_PASSWORD')
 AWS_S3_ENDPOINT_URL = 'http://minio:9000'  # Internal Docker access
 AWS_STORAGE_BUCKET_NAME = 'flags'
 
-AWS_S3_CUSTOM_DOMAIN = 'localhost/flags'
+AWS_S3_CUSTOM_DOMAIN = 'flagwars.mecebeci.com/flags'
 
 # MinIO-specific settings
 AWS_S3_USE_SSL = False  # Force HTTP not HTTPS

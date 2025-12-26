@@ -30,6 +30,12 @@ jobs:
             echo "Deploying updated services..."
             docker compose -f docker-compose.prod.yml up -d
             
+            echo "Waiting for services to be ready..."
+            sleep 10
+            
+            echo "Restarting Nginx..."
+            docker compose -f docker-compose.prod.yml restart nginx
+            
             echo "Cleaning up old Docker images..."
             docker image prune -f
             

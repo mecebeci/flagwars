@@ -166,7 +166,7 @@ const LeaderboardPage = () => {
               </p>
 
               <Link
-                to="/quiz"
+                to="/challenge"
                 className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
               >
                 Start Playing

@@ -12,7 +12,7 @@ const useQuiz = () => {
   const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [totalCountries, setTotalCountries] = useState(192);
+  const [totalCountries, setTotalCountries] = useState(194);
 
   // Refs for optimization
   const checkTimeoutRef = useRef(null);
@@ -68,7 +68,7 @@ const useQuiz = () => {
         console.log('🎉 All countries completed!');
         setScore(response.data.final_score);
         setCountriesViewed(response.data.countries_viewed);
-        setTotalCountries(response.data.total_countries || 192);
+        setTotalCountries(response.data.total_countries || 194);
         setQuizStatus('gameOver');
         return;
       }

@@ -2,7 +2,7 @@ const QuizStats = ({
   score, 
   skipsRemaining, 
   countriesViewed, 
-  totalCountries = 192,
+  totalCountries = 194,
   elapsedSeconds = 0  // ⏱️ NEW prop
 }) => {
   const progressPercentage = Math.round((countriesViewed / totalCountries) * 100);

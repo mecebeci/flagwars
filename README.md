@@ -4,7 +4,7 @@
 ![Frontend CI](https://github.com/mecebeci/flagwars/actions/workflows/frontend-ci.yml/badge.svg)
 ![Deploy to Production](https://github.com/mecebeci/flagwars/actions/workflows/deploy.yml/badge.svg)
 
-A full-stack multiplayer flag trivia game where players compete to identify country flags in real-time. Built with Django REST Framework, React, and deployed with Docker on a VPS with production-grade infrastructure.
+A full-stack interactive flag trivia game where players identify country flags and compete on global leaderboards. Built with Django REST Framework, React, and deployed with Docker on a VPS with production-grade infrastructure.
 
 ## Live Demo
 
@@ -12,19 +12,19 @@ A full-stack multiplayer flag trivia game where players compete to identify coun
 
 ## Project Overview
 
-Flag Wars is a competitive trivia application that tests users' knowledge of world flags. Players answer questions, track their progress on global leaderboards, and compete for the best scores. The application features JWT authentication, real-time statistics calculation, and optimized image delivery through object storage.
+Flag Wars is an interactive trivia application that tests users' knowledge of world flags. Players answer questions in individual game sessions, track their progress on global leaderboards, and compete for the best scores. The application features JWT authentication, asynchronous statistics calculation, and optimized image delivery through object storage.
 
 ### Key Features
 
-- JWT-based user authentication with token refresh
-- Real-time game sessions with score tracking
-- Global leaderboard system with daily snapshots
-- Redis caching for optimized performance
-- S3-compatible object storage for flag images
-- Background task processing with Celery
-- Scheduled jobs for statistics calculation
-- Production-ready Docker deployment
-- SSL/TLS encryption with Let's Encrypt
+- JWT-based user authentication with token refresh and blacklist support
+- Individual game sessions with score tracking and skip functionality
+- Global leaderboard system ranking players by best performance
+- Redis caching for optimized API performance (country data, leaderboards)
+- S3-compatible object storage (MinIO) for flag images
+- Asynchronous background task processing with Celery workers
+- Scheduled jobs for daily statistics and leaderboard snapshots
+- Production-ready Docker deployment with multi-container orchestration
+- SSL/TLS encryption with Let's Encrypt and Nginx reverse proxy
 
 ## Tech Stack
 
@@ -191,10 +191,6 @@ docker-compose exec web python manage.py loaddata initial_data/countries.json
 - API Documentation: http://localhost:8000/api/schema/swagger-ui
 - MinIO Console: http://localhost:9001
 - Flower (Celery Monitor): http://localhost:5555
-
-### Production Deployment
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed production deployment instructions.
 
 ## Project Structure
 

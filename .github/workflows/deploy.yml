@@ -1,0 +1,39 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allows manual deployment from GitHub UI
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.VPS_PATH }}
+            
+            echo "Pulling latest code..."
+            git pull origin main
+            
+            echo "Building Docker images..."
+            docker compose -f docker-compose.prod.yml build
+            
+            echo "Deploying updated services..."
+            docker compose -f docker-compose.prod.yml up -d
+            
+            echo "Cleaning up old Docker images..."
+            docker image prune -f
+            
+            echo "Deployment completed successfully!"
+            
+            echo "Container status:"
+            docker compose -f docker-compose.prod.yml ps

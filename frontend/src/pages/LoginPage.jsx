@@ -15,12 +15,12 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Redirect logged-in users (but NOT after success)
+  // Redirect logged-in users ONLY on mount (not after failed login)
   useEffect(() => {
-    if (isAuthenticated && !isSuccess) {
+    if (isAuthenticated) {
       navigate('/');
     }
-  }, [isAuthenticated, isSuccess, navigate]);
+  }, []); // Empty dependency array - only run once on mount
 
   // Redirect after success (1 second)
   useEffect(() => {
@@ -91,8 +91,9 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Error Message */}
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                {error}
+              <div className="bg-red-50 border border-red-400 text-red-800 px-4 py-3 rounded">
+                <p className="font-semibold">Login failed</p>
+                <p className="text-sm mt-1">{error}</p>
               </div>
             )}
 

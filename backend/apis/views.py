@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from apis.tasks import update_leaderboard_async, calculate_user_statistics
+from django.core.cache import cache
 
 from .models import Country, GameSession
 from .serializers import *
@@ -83,32 +84,38 @@ def get_question(request):
     
     # If there's a current country, return it (user is retrying)
     if game_session.current_country_id:
-        try:
-            country = Country.objects.get(id=game_session.current_country_id)
-        except Country.DoesNotExist:
-            country = None
+        # Try cache first
+        cache_key = f'country_data_{game_session.current_country_id}'
+        country_data = cache.get(cache_key)
+        
+        if not country_data:
+            try:
+                country = Country.objects.get(id=game_session.current_country_id)
+                country_data = {
+                    'id': country.id,
+                    'code': country.code,
+                    'flag_url': country.flag_image.url if country.flag_image else None
+                }
+                # Cache for 1 hour (country data doesn't change)
+                cache.set(cache_key, country_data, 3600)
+            except Country.DoesNotExist:
+                country_data = None
     else:
-        country = None
+        country_data = None
     
     # If no current country, get new random one
-    if not country:
-        # Get ALL viewed countries (not just last 30)
+    if not country_data:
         viewed_ids = game_session.viewed_countries
-        
-        # Get total countries count
         total_countries = Country.objects.count()
         
-        # Check if all countries have been viewed
         if len(viewed_ids) >= total_countries:
-            # ALL COUNTRIES COMPLETED! Auto-finish game
+            # Game completion logic (unchanged)
             time_elapsed = (timezone.now() - game_session.started_at).total_seconds()
             game_session.time_elapsed_seconds = int(time_elapsed)
             game_session.is_completed = True
             game_session.completed_at = timezone.now()
             game_session.save()
             
-            # Trigger leaderboard update
-            from apis.tasks import update_leaderboard_async, calculate_user_statistics
             update_leaderboard_async.delay(request.user.id, game_session.score)
             calculate_user_statistics.delay(request.user.id)
             
@@ -123,7 +130,6 @@ def get_question(request):
                 status=status.HTTP_200_OK
             )
         
-        # Get random UNVIEWED country
         country = Country.objects.exclude(id__in=viewed_ids).order_by('?').first()
         
         if not country:
@@ -132,12 +138,17 @@ def get_question(request):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-        # Set as current country
+        # Cache country data
+        country_data = {
+            'id': country.id,
+            'code': country.code,
+            'flag_url': country.flag_image.url if country.flag_image else None
+        }
+        cache_key = f'country_data_{country.id}'
+        cache.set(cache_key, country_data, 3600)
+        
         game_session.current_country_id = country.id
         game_session.save()
-    
-    # Return question data (country name HIDDEN)
-    flag_url = country.flag_image.url if country.flag_image else None
     
     # Calculate progress
     total_countries = Country.objects.count()
@@ -145,9 +156,9 @@ def get_question(request):
     remaining = total_countries - unique_viewed
     
     return Response({
-        'id': country.id,
-        'code': country.code,
-        'flag_image_url': flag_url,
+        'id': country_data['id'],
+        'code': country_data['code'],
+        'flag_image_url': country_data['flag_url'],
         'score': game_session.score,
         'skips_remaining': game_session.skips_remaining,
         'countries_viewed': unique_viewed,
@@ -326,6 +337,12 @@ def finish_game(request):
     game_session.is_completed = True
     game_session.completed_at = timezone.now()
     game_session.save()
+
+    # Clear user's game history cache
+    cache.delete(f'game_history_{request.user.id}')
+    
+    # Clear leaderboard cache (will refresh on next request)
+    cache.delete('global_leaderboard_top10')
     
     # Update leaderboard with final score
     update_leaderboard_async.delay(request.user.id, game_session.score)
@@ -397,12 +414,17 @@ def random_country(request):
 )
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def get_leaderboard(request):    
-    # Get all completed sessions, grouped by best performance per user
+def get_leaderboard(request):
+    # Try cache first
+    cache_key = 'global_leaderboard_top10'
+    cached_data = cache.get(cache_key)
+    
+    if cached_data:
+        return Response(cached_data, status=status.HTTP_200_OK)
+    
+    # Cache miss - query database
     from django.db.models import OuterRef, Subquery
     
-    # Subquery to find each user's best session
-    # Best = highest score, then fastest time
     best_sessions = GameSession.objects.filter(
         user=OuterRef('user'),
         is_completed=True
@@ -411,7 +433,6 @@ def get_leaderboard(request):
         'time_elapsed_seconds'
     ).values('id')[:1]
     
-    # Get the actual best session for each user
     leaderboard = GameSession.objects.filter(
         id__in=Subquery(best_sessions),
         is_completed=True
@@ -423,7 +444,6 @@ def get_leaderboard(request):
     
     serializer = LeaderboardEntrySerializer(leaderboard, many=True)
     
-    # Add rank to each entry
     leaderboard_data = []
     for rank, entry in enumerate(serializer.data, start=1):
         leaderboard_data.append({
@@ -431,10 +451,15 @@ def get_leaderboard(request):
             **entry
         })
     
-    return Response({
+    response_data = {
         'leaderboard': leaderboard_data,
         'total_entries': len(leaderboard_data)
-    }, status=status.HTTP_200_OK)
+    }
+    
+    # Cache for 30 seconds
+    cache.set(cache_key, response_data, 30)
+    
+    return Response(response_data, status=status.HTTP_200_OK)
 
 
 def normalize_answer(value: str) -> str:

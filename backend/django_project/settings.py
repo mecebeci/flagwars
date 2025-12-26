@@ -235,3 +235,9 @@ STORAGES = {
         'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
     },
 }
+
+# CSRF Settings
+CSRF_TRUSTED_ORIGINS = [
+    'https://flagwars.mecebeci.com',
+    'http://flagwars.mecebeci.com',
+]

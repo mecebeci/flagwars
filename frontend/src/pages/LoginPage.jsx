@@ -14,15 +14,16 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [hasAttemptedLogin, setHasAttemptedLogin] = useState(false);
 
-  // Redirect logged-in users ONLY on mount (not after failed login)
+  // Redirect logged-in users ONLY if they haven't just attempted login
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !hasAttemptedLogin) {
       navigate('/');
     }
-  }, []); // Empty dependency array - only run once on mount
+  }, [isAuthenticated, hasAttemptedLogin, navigate]);
 
-  // Redirect after success (1 second)
+  // Redirect after successful login (1 second delay)
   useEffect(() => {
     if (!isSuccess) return;
 
@@ -48,6 +49,7 @@ const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setHasAttemptedLogin(true);
 
     const result = await login(formData.username, formData.password);
 
@@ -56,6 +58,7 @@ const LoginPage = () => {
     } else {
       setError(result.error);
       setLoading(false);
+      setHasAttemptedLogin(false); // Reset so they can try again
     }
   };
 

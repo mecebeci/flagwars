@@ -1,7 +1,7 @@
 const QuizGameOver = ({ 
   score, 
   countriesViewed, 
-  totalCountries = 192, 
+  totalCountries = 194, 
   elapsedSeconds = 0,  // ⏱️ NEW prop
   onRestart 
 }) => {

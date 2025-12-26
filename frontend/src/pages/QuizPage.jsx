@@ -76,7 +76,7 @@ const QuizPage = () => {
                   <li>• Correct answer = Score +1, auto-advance</li>
                   <li>• Wrong answer = Try again (unlimited retries)</li>
                   <li>• Skip = Move to next flag (3 skips total)</li>
-                  <li>• Game continues until you see all 192 flags!</li>
+                  <li>• Game continues until you see all 194 flags!</li>
                 </ul>
               </div>
 

@@ -78,6 +78,6 @@ class RecentGameSerializer(serializers.ModelSerializer):
         return len(obj.viewed_countries)  # Get length of JSONField list
     
     def get_completion_percentage(self, obj):
-        total_countries = 192
+        total_countries = 194
         countries_count = len(obj.viewed_countries)
         return round((countries_count / total_countries) * 100)

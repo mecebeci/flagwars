@@ -6,9 +6,9 @@
 
 A full-stack interactive flag trivia game where players identify country flags and compete on global leaderboards. Built with Django REST Framework, React, and deployed with Docker on a VPS with production-grade infrastructure.
 
-## Live Demo
+> **Note:** This project is no longer actively hosted. The live demo has been taken offline.
 
-**Production URL:** [https://flagwars.mecebeci.com](https://flagwars.mecebeci.com)
+---
 
 ## Project Overview
 
